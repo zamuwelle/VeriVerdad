@@ -10,6 +10,7 @@ Route::middleware('secret.token')->group(function () {
 
 	Route::middleware('auth:sanctum')->group(function () {
 		Route::post('logout', [AuthController::class, 'logout']);
+		Route::get('users', [AuthController::class, 'users']);
 		Route::post('chat', [ChatController::class, 'chat']);
 		Route::get('chats', [ChatController::class, 'index']);
 		Route::get('chats/{id}', [ChatController::class, 'show']);
