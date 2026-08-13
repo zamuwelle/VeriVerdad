@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTitle } from '../hooks/useTitle'
 import { Link } from 'react-router'
 import { Chevron, Menu } from '../components/Icons'
 
@@ -78,6 +79,7 @@ const navItems = [
 const baseButton = 'inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-[var(--color-surface)] bg-[var(--color-primary)] rounded-[var(--radius-md)] no-underline hover:opacity-80'
 
 export const Component = () => {
+	useTitle('VeriVerdad — Stop Scrolling Past Fake News. Start Spotting It.')
 	const [menuOpen, setMenuOpen] = useState(false)
 
 	return (

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTitle } from '../hooks/useTitle'
 import { useParams, useNavigate } from 'react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
@@ -64,6 +65,8 @@ export const Component = () => {
 	const scrollContainerRef = useRef(null)
 	const textareaRef = useRef(null)
 	const requestStartTimeRef = useRef(null)
+
+	useTitle(conversationId ? `Veribot — Chat ${conversationId}` : 'Veribot — VeriVerdad')
 
 	const scroll = () => setTimeout(() => scrollContainerRef.current?.scrollTo({ top: scrollContainerRef.current.scrollHeight }), 20)
 

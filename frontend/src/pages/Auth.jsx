@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTitle } from '../hooks/useTitle'
 import { useLocation, Link, useNavigate } from 'react-router'
 import { useMutation } from '@tanstack/react-query'
 import { login, register, setAuth } from '../api'
@@ -24,6 +25,7 @@ export const Component = () => {
 	const location = useLocation()
 	const navigate = useNavigate()
 	const isRegister = location.pathname === '/register'
+	useTitle(isRegister ? 'Create Account — VeriVerdad' : 'Sign In — VeriVerdad')
 
 	const [loginForm, setLoginForm] = useState({ email: '', password: '' })
 	const [regForm, setRegForm] = useState({ username: '', email: '', password: '' })

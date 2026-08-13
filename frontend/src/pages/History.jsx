@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTitle } from '../hooks/useTitle'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { TrashIcon } from '../components/Icons'
@@ -9,6 +10,7 @@ import { Sidebar } from '../components/Sidebar'
 const toTitleCase = str => str ? str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : ''
 
 export const Component = () => {
+	useTitle('History — VeriVerdad')
 	const location = useLocation()
 	const navigate = useNavigate()
 	const queryClient = useQueryClient()

@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useTitle } from '../hooks/useTitle'
 import { Sidebar } from '../components/Sidebar'
 
 export const Component = () => {
+	useTitle('Leaderboards — VeriVerdad')
 	return (
 		<>
 			<div className="min-h-screen flex flex-col lg:flex-row bg-[var(--color-bg)] text-[var(--color-text)]">
