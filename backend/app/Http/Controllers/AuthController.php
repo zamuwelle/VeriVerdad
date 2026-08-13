@@ -40,4 +40,14 @@ class AuthController extends Controller
 
 		return response()->noContent();
 	}
+
+	public function users()
+	{
+		// Get all users except the currently logged-in user
+		$users = User::where('id', '!=', auth()->id())
+			->select('id', 'username')
+			->get();
+
+		return $this->success($users);
+	}
 }

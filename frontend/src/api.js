@@ -42,3 +42,5 @@ export const getConversation = id => api.get(`/chats/${id}`).then(({ data }) => 
 export const deleteConversation = id => api.delete(`/chats/${id}`)
 
 export const updateConversation = (id, title) => api.patch(`/chats/${id}`, { title })
+
+export const getUsers = () => api.get('/users').then(({ data }) => data.data)
