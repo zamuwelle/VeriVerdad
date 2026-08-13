@@ -1,6 +1,6 @@
 <div align="center">
 
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/e7f82a80-c0dd-4301-baab-81e08f2582f9" />
+<img src="https://raw.githubusercontent.com/zamuwelle/veriverdad/main/frontend/public/mascot.png" alt="VeriVerdad Mascot" width="120" />
 
 <h1>VeriVerdad</h1>
 
@@ -12,6 +12,22 @@
   <a href="#usage">Usage</a> &bull;
   <a href="#contributing">Contributing</a> &bull;
   <a href="#troubleshooting">Troubleshooting</a>
+</p>
+
+<p>
+  <a href="https://vercel.com/xoptechs-projects/veriverdad" title="Vercel"><img src="https://img.shields.io/badge/Vercel-%23000000.svg?logo=vercel&logoColor=white" alt="Vercel" /></a>
+  <a href="https://render.com/deploy?service=srv-d9kogr61egvs7380m7gg" title="Render"><img src="https://img.shields.io/badge/Render-46E3B7?logo=render&logoColor=000" alt="Render" /></a>
+</p>
+
+<p>
+  <a href="https://www.php.net" title="PHP"><img src="https://img.shields.io/badge/php-%23777BB4.svg?&logo=php&logoColor=white" alt="PHP" /></a>
+  <a href="https://laravel.com" title="Laravel"><img src="https://img.shields.io/badge/Laravel-%23FF2D20.svg?logo=laravel&logoColor=white" alt="Laravel" /></a>
+  <a href="https://react.dev" title="React"><img src="https://img.shields.io/badge/React-%2320232a.svg?logo=react&logoColor=%2361DAFB" alt="React" /></a>
+  <a href="https://vitejs.dev" title="Vite"><img src="https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=fff" alt="Vite" /></a>
+  <a href="https://tailwindcss.com" title="Tailwind CSS"><img src="https://img.shields.io/badge/Tailwind%20CSS-%2338B2AC.svg?logo=tailwind-css&logoColor=white" alt="Tailwind CSS" /></a>
+  <a href="https://www.mysql.com" title="MySQL"><img src="https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=fff" alt="MySQL" /></a>
+  <a href="https://www.sqlite.org" title="SQLite"><img src="https://img.shields.io/badge/SQLite-%2307405e.svg?logo=sqlite&logoColor=white" alt="SQLite" /></a>
+  <a href="https://www.docker.com" title="Docker"><img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=fff" alt="Docker" /></a>
 </p>
 
 </div>
