@@ -40,6 +40,13 @@ export const HistoryIcon = props => (
 	</svg>
 )
 
+export const LeaderboardsIcon = props => (
+	<svg height="24" viewBox="0 -960 960 960" width="24" fill="currentColor" {...props}>
+		<path d="M160-200h160v-320H160v320Zm240 0h160v-560H400v560Zm240 0h160v-240H640v240ZM80-120v-480h240v-240h320v320h240v400H80Z"/>
+	</svg>
+)
+
+
 export const UpArrowIcon = props => (
 	<svg height="24" viewBox="0 -960 960 960" width="24" fill="currentColor" {...props}>
 		<path d="M440-160v-487L216-423l-56-57 320-320 320 320-56 57-224-224v487h-80Z" />

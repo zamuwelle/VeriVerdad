@@ -31,6 +31,7 @@ export const router = createBrowserRouter([
 				element: <ProtectedRoute />,
 				children: [
 					{ path: '/history', lazy: lazyPage(() => import('./pages/History')) },
+					{ path: '/leaderboards', lazy: lazyPage(() => import('./pages/Leaderboards')) },
 					{ path: '/veribot/:conversationId?', lazy: lazyPage(() => import('./pages/Veribot')) }
 				]
 			},

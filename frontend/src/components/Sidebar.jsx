@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { RobotIcon, LogoutIcon, HistoryIcon, Chevron, TrashIcon } from '../components/Icons'
+import { RobotIcon, LogoutIcon, HistoryIcon, LeaderboardsIcon, Chevron, TrashIcon } from '../components/Icons'
 import { ConfirmationModal } from './ConfirmationModal'
 import { logout, getConversations, deleteConversation, updateConversation } from '../api'
 
 const navItems = [
 	{ path: '/veribot', label: 'Veribot', Icon: RobotIcon },
 	{ path: '/history', label: 'History', Icon: HistoryIcon },
+	{ path: '/leaderboards', label: 'Leaderboards', Icon: LeaderboardsIcon },
 ]
 
 const toTitleCase = str => str ? str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : ''
