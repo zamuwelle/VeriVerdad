@@ -9,4 +9,5 @@ VeriVerdad is an AI-powered verification platform featuring **Veribot**, a speci
 ```
 npm install @tanstack/react-query
 npm install axios
+npm install react-syntax-highlighter
 ```
