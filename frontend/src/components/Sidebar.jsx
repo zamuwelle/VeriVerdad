@@ -63,7 +63,7 @@ export const Sidebar = () => {
 						<span className="text-sm font-bold tracking-wider text-[var(--color-primary)]">VERIVERDAD</span>
 					</div>
 
-					<nav className="flex flex-col gap-1 flex-1 overflow-hidden">
+					<nav className="flex flex-col gap-1 overflow-hidden">
 						{navItems.map(item => {
 							const isActive = location.pathname === item.path
 							return (
