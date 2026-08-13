@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Sidebar } from '../components/Sidebar'
-import { UpArrowIcon, EditIcon, CopyIcon, Chevron } from '../components/Icons'
+import { UpArrowIcon, EditIcon, CopyIcon, Chevron, SearchIcon, GameControllerIcon } from '../components/Icons'
 import { sendMessage, getConversation } from '../api'
 
 const getTime = d => new Date(d || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -30,7 +30,7 @@ export const CodeBlock = ({ language, value }) => {
 }
 
 export const Thinking = ({ reasoning, thinkTime, isThinkingActive = false }) => {
-	const [isOpen, setIsOpen] = useState(true)
+	const [isOpen, setIsOpen] = useState(false)
 	return (
 		<div className="my-2 select-none">
 			<button type="button" onClick={() => setIsOpen(!isOpen)} className="group flex items-center gap-2 py-1.5 px-2.5 rounded-lg hover:opacity-80 text-[var(--color-text-muted)] text-xs cursor-pointer">
@@ -42,8 +42,8 @@ export const Thinking = ({ reasoning, thinkTime, isThinkingActive = false }) => 
 			</button>
 			{isOpen && (
 				<div className="mt-2 pl-3.5 border-l-2 border-[var(--color-border)]">
-					<div className="text-xs text-[var(--color-text-muted)] space-y-1.5 py-1 leading-relaxed">
-						{reasoning ? <div className="whitespace-pre-wrap">{reasoning}</div> : <div className="text-[var(--color-text-faint)] italic">Analyzing user prompt, assessing intent, and preparing response steps...</div>}
+					<div className="text-xs text-[var(--color-text-muted)] space-y-1.5 py-1 leading-relaxed whitespace-pre-wrap">
+						{reasoning || 'Analyzing response steps...'}
 					</div>
 				</div>
 			)}
@@ -63,16 +63,33 @@ export const Component = () => {
 	const [conversationId, setConversationId] = useState(routeId || null)
 	const scrollContainerRef = useRef(null)
 	const textareaRef = useRef(null)
+	const requestStartTimeRef = useRef(null)
 
 	const scroll = () => setTimeout(() => scrollContainerRef.current?.scrollTo({ top: scrollContainerRef.current.scrollHeight }), 20)
 
 	useEffect(() => {
 		if (routeId) {
-			if (routeId !== conversationId || !messages.length) {
-				setConversationId(routeId)
-				getConversation(routeId).then(res => setMessages((res?.messages || res?.data?.messages || (Array.isArray(res?.data) ? res.data : [])).map(m => ({ ...m, timestamp: getTime(m.created_at) }))))
-			}
-		} else (setConversationId(null), setMessages([]))
+			setConversationId(routeId)
+			getConversation(routeId).then(res => {
+				const list = res?.messages || res?.data?.messages || (Array.isArray(res?.data) ? res.data : [])
+				setMessages(list.map((m, i) => {
+					const prev = list[i - 1]
+					const diff = prev?.created_at && m.created_at ? Math.max(1, Math.round((new Date(m.created_at) - new Date(prev.created_at)) / 1000)) : 1
+					return {
+						...m,
+						timestamp: getTime(m.created_at),
+						thinkTime: `${diff} second${diff === 1 ? '' : 's'}`,
+						hasVerify: m.content?.includes('[VERIFY]'),
+						hasOfferQuiz: m.content?.includes('[OFFER_QUIZ]'),
+						content: m.content?.replace('[VERIFY]', '')?.replace('[OFFER_QUIZ]', '')?.replace(/\[CHOICES:[^\]]+\]/, '')?.trim() || ''
+					}
+				}))
+			})
+		} else {
+			setConversationId(null)
+			setMessages([])
+			setInteractiveChoice(null)
+		}
 	}, [routeId])
 
 	useEffect(() => {
@@ -80,33 +97,47 @@ export const Component = () => {
 	}, [messages.length])
 
 	const chatMutation = useMutation({
-		mutationFn: ({ message, id, messageId }) => sendMessage(message, id, messageId),
+		mutationFn: ({ message, id, verify }) => sendMessage(message, id, verify),
 		onSuccess: res => {
 			queryClient.invalidateQueries({ queryKey: ['chats'] })
-			const targetId = res.data.conversation?.id || res.data.conversation_id
-			targetId && (setConversationId(targetId), !routeId && navigate(`/veribot/${targetId}`, { replace: true }))
-			setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: res.data.reply, reasoning: res.data.reasoning, timestamp: getTime(res.data.created_at) }])
+			if (res.data.conversation_id) (setConversationId(res.data.conversation_id), !routeId && navigate(`/veribot/${res.data.conversation_id}`, { replace: true }))
+			const raw = res.data.reply || ''
+			const hasVerify = raw.includes('[VERIFY]')
+			const hasOfferQuiz = raw.includes('[OFFER_QUIZ]')
+			const choicesMatch = raw.match(/\[CHOICES:\s*([\s\S]+?)\]/)
+			const reply = raw.replace('[VERIFY]', '').replace('[OFFER_QUIZ]', '').replace(/\[CHOICES:\s*[\s\S]+?\]/, '').trim()
+			const totalTime = res.data.usage?.total_time
+			const elapsed = totalTime ? Math.max(1, Math.round(totalTime)) : Math.max(1, Math.round((Date.now() - (requestStartTimeRef.current || Date.now())) / 1000))
+			setMessages(prev => [...prev, {
+				id: crypto.randomUUID(),
+				role: 'assistant',
+				content: reply,
+				reasoning: res.data.reasoning,
+				thinkTime: `${elapsed} second${elapsed === 1 ? '' : 's'}`,
+				timestamp: getTime(res.data.created_at),
+				hasVerify,
+				hasOfferQuiz
+			}])
+			if (choicesMatch) setInteractiveChoice({ title: 'Pick an answer', options: choicesMatch[1].split('|').map(o => o.trim()) })
+			else setInteractiveChoice(null)
+			setTimeout(() => scrollContainerRef.current?.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior: 'smooth' }), 10)
 		}
 	})
 
-	const sendPrompt = (textToSend, editMessageId = null) => {
+	const sendPrompt = (textToSend, verify = false) => {
 		const text = textToSend || input.trim()
 		if (!text || chatMutation.isPending) return
 		chatMutation.reset()
-		if (editMessageId) {
-			const idx = messages.findIndex(m => m.id === editMessageId)
-			idx !== -1 && setMessages(prev => prev.slice(0, idx))
-			setEditingId(null)
-			setEditText('')
-		} else {
+		if (!textToSend) {
 			setInput('')
 			textareaRef.current && (textareaRef.current.style.height = 'auto')
 		}
+		requestStartTimeRef.current = Date.now()
 		setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: text, timestamp: getTime() }])
-		chatMutation.mutate({ message: text, id: conversationId, messageId: editMessageId })
+		chatMutation.mutate({ message: text, id: conversationId, verify })
 	}
 
-	const saveEditing = id => editText.trim() && sendPrompt(editText.trim(), id)
+	const saveEditing = id => editText.trim() && sendPrompt(editText.trim())
 
 	const renderInputCard = placeholderText => (
 		<div className="w-full bg-[var(--color-surface)] rounded-2xl p-3.5 space-y-3 border border-[var(--color-border)]">
@@ -124,15 +155,10 @@ export const Component = () => {
 			<Sidebar />
 
 			<main className="flex-1 flex flex-col h-full overflow-hidden relative">
-				<header className="p-2.5 border-b border-[var(--color-border)] flex items-center justify-between shrink-0 bg-[var(--color-surface)] z-20">
-					<button type="button" onClick={() => setInteractiveChoice({ title: 'Testing Mode: Pick a choice', options: ['Option A', 'Option B', 'Option C', 'Option D'] })} className="text-xs px-2.5 py-1 rounded-md bg-[var(--color-bg)] hover:opacity-80 text-[var(--color-text-muted)] border border-[var(--color-border)] cursor-pointer">
-						Test Selection Choices
-					</button>
-				</header>
-
 				<div ref={scrollContainerRef} className="flex-1 w-full overflow-y-auto">
 					{!messages.length ? (
 						<div className="flex flex-col items-center justify-center min-h-full p-4 md:p-8 max-w-3xl mx-auto w-full">
+							<img src="/mascot.png" alt="" className="w-24 h-24 sm:w-28 sm:h-28 object-contain mb-4 select-none" />
 							<h2 className="text-2xl md:text-3xl font-bold text-[var(--color-text)] tracking-tight mb-8 text-center">How can Veribot help you today?</h2>
 							{renderInputCard("Ask Veribot to check a claim...")}
 						</div>
@@ -171,6 +197,24 @@ export const Component = () => {
 													>
 														{msg.content}
 													</ReactMarkdown>
+
+													{msg.role === 'assistant' && msg.id === messages.slice().reverse().find(m => m.role === 'assistant')?.id && msg.hasVerify && (
+														<div className="pt-1.5">
+															<button type="button" onClick={() => sendPrompt('Verify this claim with real sources and evidence.', true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 text-xs font-medium text-[var(--color-text)] cursor-pointer">
+																<SearchIcon style={{ width: '14px', height: '14px' }} />
+																<span>Verify this claim with web sources</span>
+															</button>
+														</div>
+													)}
+
+													{msg.role === 'assistant' && msg.id === messages.slice().reverse().find(m => m.role === 'assistant')?.id && msg.hasOfferQuiz && (
+														<div className="pt-1.5">
+															<button type="button" onClick={() => sendPrompt('Test my instincts on this with a quick quiz question.')} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 text-xs font-medium text-[var(--color-text)] cursor-pointer">
+																<GameControllerIcon style={{ width: '14px', height: '14px' }} />
+																<span>Test your instincts (Quiz)</span>
+															</button>
+														</div>
+													)}
 												</>
 											)}
 										</div>
@@ -211,7 +255,7 @@ export const Component = () => {
 							</div>
 							<div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
 								{interactiveChoice.options.map((opt, idx) => (
-									<button type="button" key={idx} onClick={() => (setInteractiveChoice(null), sendPrompt(`I choose ${opt}.`))} className="flex items-center gap-2.5 p-2 rounded-lg bg-[var(--color-bg)] hover:opacity-80 border border-[var(--color-border)] text-left text-xs text-[var(--color-text)] cursor-pointer">
+									<button type="button" key={idx} onClick={() => (setInteractiveChoice(null), sendPrompt(opt))} className="flex items-center gap-2.5 p-2 rounded-lg bg-[var(--color-bg)] hover:opacity-80 border border-[var(--color-border)] text-left text-xs text-[var(--color-text)] cursor-pointer">
 										<span className="w-5 h-5 rounded bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[11px] text-[var(--color-text-muted)] shrink-0">{idx + 1}</span>
 										<span className="flex-1 font-medium">{opt}</span>
 									</button>
