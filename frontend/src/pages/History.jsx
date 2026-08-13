@@ -42,7 +42,7 @@ export const Component = () => {
 				<main className="flex-1 md:px-64 pt-16">
 					<h1 className="text-3xl font-bold text-[var(--color-text)] tracking-tight mb-8 text-center">History</h1>
 					<div className="flex flex-col gap-0.5 overflow-y-auto flex-1">
-					{ ! Array.isArray(chats) ? <p className='text-center'>No recent conversation yet</p> :
+					{ ! Array.isArray(chats) || chats.length === 0 ? <p className='text-center'>No recent conversation yet</p> :
 						chats.map(chat => {
 						const isChatActive = location.pathname === `/veribot/${chat.id}`
 						const chatTitle = toTitleCase(chat.title || chat.first_message || 'Untitled Chat')
