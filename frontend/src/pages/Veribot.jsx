@@ -61,6 +61,7 @@ export const Component = () => {
 	const [editingId, setEditingId] = useState(null)
 	const [editText, setEditText] = useState('')
 	const [interactiveChoice, setInteractiveChoice] = useState(null)
+	const [lockedChoice, setLockedChoice] = useState(null)
 	const [conversationId, setConversationId] = useState(routeId || null)
 	const scrollContainerRef = useRef(null)
 	const textareaRef = useRef(null)
@@ -92,6 +93,7 @@ export const Component = () => {
 			setConversationId(null)
 			setMessages([])
 			setInteractiveChoice(null)
+			setLockedChoice(null)
 		}
 	}, [routeId])
 
@@ -121,13 +123,15 @@ export const Component = () => {
 				hasVerify,
 				hasOfferQuiz
 			}])
-			if (choicesMatch) setInteractiveChoice({ title: 'Pick an answer', options: choicesMatch[1].split('|').map(o => o.trim()) })
+			setLockedChoice(null)
+			if (choicesMatch) setInteractiveChoice({ title: 'Pick an answer or type your own below', options: choicesMatch[1].split('|').map(o => o.trim()) })
 			else setInteractiveChoice(null)
 			setTimeout(() => scrollContainerRef.current?.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior: 'smooth' }), 10)
-		}
+		},
+		onError: () => setLockedChoice(null)
 	})
 
-	const sendPrompt = (textToSend, verify = false) => {
+	const sendPrompt = (textToSend, verify = false, hidden = false) => {
 		const text = textToSend || input.trim()
 		if (!text || chatMutation.isPending) return
 		chatMutation.reset()
@@ -136,8 +140,14 @@ export const Component = () => {
 			textareaRef.current && (textareaRef.current.style.height = 'auto')
 		}
 		requestStartTimeRef.current = Date.now()
-		setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: text, timestamp: getTime() }])
+		if (!hidden) setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: text, timestamp: getTime() }])
+		setInteractiveChoice(null)
 		chatMutation.mutate({ message: text, id: conversationId, verify })
+	}
+
+	const pickChoice = opt => {
+		setLockedChoice(opt)
+		sendPrompt(opt)
 	}
 
 	const saveEditing = id => editText.trim() && sendPrompt(editText.trim())
@@ -167,78 +177,81 @@ export const Component = () => {
 						</div>
 					) : (
 						<div className="p-4 md:p-6 space-y-6 max-w-3xl mx-auto w-full">
-							{messages.map(msg => (
-								<div key={msg.id} className="group flex flex-col space-y-1">
-									<div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-										<div onDoubleClick={() => msg.role === 'user' && (setEditingId(msg.id), setEditText(msg.content))} className={`max-w-[88%] rounded-lg px-4 py-2.5 text-sm text-[var(--color-text)] ${editingId === msg.id ? 'border border-[var(--color-border)]' : msg.role === 'user' ? 'bg-[var(--color-surface)] cursor-pointer select-none' : ''}`}>
-											{editingId === msg.id ? (
-												<textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), saveEditing(msg.id))} rows={1} style={{ fieldSizing: 'content' }} className="w-full min-w-[280px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-0 text-sm text-[var(--color-text)] resize-none" />
-											) : (
-												<>
-													{msg.role === 'assistant' && msg.reasoning && <Thinking reasoning={msg.reasoning} thinkTime={msg.thinkTime} />}
-													<ReactMarkdown
-														remarkPlugins={[remarkGfm]}
-														components={{
-															a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:opacity-80" />,
-															table: ({ node, ...props }) => <div className="overflow-x-auto my-2"><table {...props} className="w-full border-collapse border border-[var(--color-border)] text-xs" /></div>,
-															th: ({ node, ...props }) => <th {...props} className="border border-[var(--color-border)] bg-[var(--color-bg)] p-2 font-semibold text-left text-[var(--color-text)]" />,
-															td: ({ node, ...props }) => <td {...props} className="border border-[var(--color-border)] p-2 text-[var(--color-text)]" />,
-															ul: ({ node, ...props }) => <ul {...props} className="list-disc ml-4 space-y-1 my-1" />,
-															ol: ({ node, ...props }) => <ol {...props} className="list-decimal ml-4 space-y-1 my-1" />,
-															p: ({ node, ...props }) => <p {...props} className="whitespace-pre-wrap leading-relaxed my-1" />,
-															code: ({ node, className, children, ...props }) => {
-																const match = /language-(\w+)/.exec(className || '')
-																return match ? (
-																	<CodeBlock language={match[1]} value={String(children).replace(/\n$/, '')} />
-																) : (
-																	<code {...props} className="bg-[var(--color-bg)] text-[var(--color-primary)] px-1 py-0.5 rounded text-xs border border-[var(--color-border)]">
-																		{children}
-																	</code>
-																)
-															}
-														}}
-													>
-														{msg.content}
-													</ReactMarkdown>
+							{messages.map(msg => {
+								const isLastAssistant = msg.id === messages.slice().reverse().find(m => m.role === 'assistant')?.id
+								return (
+									<div key={msg.id} className="group flex flex-col space-y-1">
+										<div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+											<div onDoubleClick={() => msg.role === 'user' && (setEditingId(msg.id), setEditText(msg.content))} className={`max-w-[88%] rounded-lg px-4 py-2.5 text-sm text-[var(--color-text)] ${editingId === msg.id ? 'border border-[var(--color-border)]' : msg.role === 'user' ? 'bg-[var(--color-surface)] cursor-pointer' : ''}`}>
+												{editingId === msg.id ? (
+													<textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), saveEditing(msg.id))} rows={1} style={{ fieldSizing: 'content' }} className="w-full min-w-[280px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-0 text-sm text-[var(--color-text)] resize-none" />
+												) : (
+													<>
+														{msg.role === 'assistant' && msg.reasoning && <Thinking reasoning={msg.reasoning} thinkTime={msg.thinkTime} />}
+														<ReactMarkdown
+															remarkPlugins={[remarkGfm]}
+															components={{
+																a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:opacity-80" />,
+																table: ({ node, ...props }) => <div className="overflow-x-auto my-2"><table {...props} className="w-full border-collapse border border-[var(--color-border)] text-xs" /></div>,
+																th: ({ node, ...props }) => <th {...props} className="border border-[var(--color-border)] bg-[var(--color-bg)] p-2 font-semibold text-left text-[var(--color-text)]" />,
+																td: ({ node, ...props }) => <td {...props} className="border border-[var(--color-border)] p-2 text-[var(--color-text)]" />,
+																ul: ({ node, ...props }) => <ul {...props} className="list-disc ml-4 space-y-1 my-1" />,
+																ol: ({ node, ...props }) => <ol {...props} className="list-decimal ml-4 space-y-1 my-1" />,
+																p: ({ node, ...props }) => <p {...props} className="whitespace-pre-wrap leading-relaxed my-1" />,
+																code: ({ node, className, children, ...props }) => {
+																	const match = /language-(\w+)/.exec(className || '')
+																	return match ? (
+																		<CodeBlock language={match[1]} value={String(children).replace(/\n$/, '')} />
+																	) : (
+																		<code {...props} className="bg-[var(--color-bg)] text-[var(--color-primary)] px-1 py-0.5 rounded text-xs border border-[var(--color-border)]">
+																			{children}
+																		</code>
+																	)
+																}
+															}}
+														>
+															{msg.content}
+														</ReactMarkdown>
 
-													{msg.role === 'assistant' && msg.id === messages.slice().reverse().find(m => m.role === 'assistant')?.id && msg.hasVerify && (
-														<div className="pt-1.5">
-															<button type="button" onClick={() => sendPrompt('Verify this claim with real sources and evidence.', true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 text-xs font-medium text-[var(--color-text)] cursor-pointer">
-																<SearchIcon style={{ width: '14px', height: '14px' }} />
-																<span>Verify this claim with web sources</span>
-															</button>
-														</div>
-													)}
+														{msg.role === 'assistant' && isLastAssistant && msg.hasVerify && (
+															<div className="pt-1.5">
+																<button type="button" disabled={chatMutation.isPending} onClick={() => sendPrompt('Verify this claim with real sources and evidence.', true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium text-[var(--color-text)] cursor-pointer">
+																	<SearchIcon style={{ width: '14px', height: '14px' }} />
+																	<span>Verify this claim with web sources</span>
+																</button>
+															</div>
+														)}
 
-													{msg.role === 'assistant' && msg.id === messages.slice().reverse().find(m => m.role === 'assistant')?.id && msg.hasOfferQuiz && (
-														<div className="pt-1.5">
-															<button type="button" onClick={() => sendPrompt('Test my instincts on this with a quick quiz question.')} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 text-xs font-medium text-[var(--color-text)] cursor-pointer">
-																<GameControllerIcon style={{ width: '14px', height: '14px' }} />
-																<span>Test your instincts (Quiz)</span>
-															</button>
-														</div>
-													)}
-												</>
+														{msg.role === 'assistant' && isLastAssistant && msg.hasOfferQuiz && (
+															<div className="pt-1.5">
+																<button type="button" disabled={chatMutation.isPending} onClick={() => sendPrompt('Test my instincts on this with a quick quiz question.', false, true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium text-[var(--color-text)] cursor-pointer">
+																	<GameControllerIcon style={{ width: '14px', height: '14px' }} />
+																	<span>Test your instincts (Quiz)</span>
+																</button>
+															</div>
+														)}
+													</>
+												)}
+											</div>
+											{editingId === msg.id && (
+												<div className="flex justify-end gap-2 text-xs mt-1">
+													<button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 rounded text-[var(--color-text)] hover:opacity-80 cursor-pointer">Cancel</button>
+													<button type="button" onClick={() => saveEditing(msg.id)} disabled={!editText.trim()} className="px-3 py-1.5 rounded bg-[var(--color-primary)] text-white font-medium hover:opacity-80 disabled:opacity-50 cursor-pointer">Save</button>
+												</div>
+											)}
+											{editingId !== msg.id && (
+												<div className="flex items-center gap-1 mt-1 px-1 text-[var(--color-text-faint)] opacity-0 group-hover:opacity-100">
+													{msg.timestamp && <span className="text-xs pr-1.5">{msg.timestamp}</span>}
+													{msg.role === 'user' && <button type="button" onClick={() => (setEditingId(msg.id), setEditText(msg.content))} className="p-1.5 rounded hover:opacity-80 flex items-center justify-center cursor-pointer" style={{ width: '28px', height: '28px' }}><EditIcon style={{ width: '1em', height: '1em', fontSize: '16px' }} /></button>}
+													<button type="button" onClick={() => navigator.clipboard.writeText(msg.content)} className="p-1.5 rounded hover:opacity-80 flex items-center justify-center cursor-pointer" style={{ width: '28px', height: '28px' }}><CopyIcon style={{ width: '1em', height: '1em', fontSize: '16px' }} /></button>
+												</div>
 											)}
 										</div>
-										{editingId === msg.id && (
-											<div className="flex justify-end gap-2 text-xs mt-1">
-												<button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 rounded text-[var(--color-text)] hover:opacity-80 cursor-pointer">Cancel</button>
-												<button type="button" onClick={() => saveEditing(msg.id)} disabled={!editText.trim()} className="px-3 py-1.5 rounded bg-[var(--color-primary)] text-white font-medium hover:opacity-80 disabled:opacity-50 cursor-pointer">Save</button>
-											</div>
-										)}
-										{editingId !== msg.id && (
-											<div className="flex items-center gap-1 mt-1 px-1 text-[var(--color-text-faint)] opacity-0 group-hover:opacity-100">
-												{msg.timestamp && <span className="text-xs pr-1.5">{msg.timestamp}</span>}
-												{msg.role === 'user' && <button type="button" onClick={() => (setEditingId(msg.id), setEditText(msg.content))} className="p-1.5 rounded hover:opacity-80 flex items-center justify-center cursor-pointer" style={{ width: '28px', height: '28px' }}><EditIcon style={{ width: '1em', height: '1em', fontSize: '16px' }} /></button>}
-												<button type="button" onClick={() => navigator.clipboard.writeText(msg.content)} className="p-1.5 rounded hover:opacity-80 flex items-center justify-center cursor-pointer" style={{ width: '28px', height: '28px' }}><CopyIcon style={{ width: '1em', height: '1em', fontSize: '16px' }} /></button>
-											</div>
-										)}
 									</div>
-								</div>
-							))}
+								)
+							})}
 
-							{chatMutation.isPending && (
+							{chatMutation.isPending && !lockedChoice && (
 								<div className="flex flex-col items-start max-w-[88%]">
 									<div className="p-3 rounded-xl w-full">
 										<Thinking isThinkingActive={true} />
@@ -250,19 +263,29 @@ export const Component = () => {
 				</div>
 
 				<div className="p-4 shrink-0 bg-[var(--color-bg)] max-w-3xl w-full mx-auto space-y-3">
-					{interactiveChoice && !chatMutation.isPending && (
+					{interactiveChoice && (
 						<div className="bg-[var(--color-surface)] rounded-xl p-3.5 space-y-2 border border-[var(--color-border)]">
 							<div className="flex items-center justify-between px-0.5">
-								<span className="text-xs font-semibold text-[var(--color-text)]">{interactiveChoice.title}</span>
-								<button type="button" onClick={() => setInteractiveChoice(null)} className="text-[11px] text-[var(--color-text-faint)] hover:opacity-80 cursor-pointer">Dismiss</button>
+								<span className="text-xs font-semibold text-[var(--color-text)]">{lockedChoice ? 'Checking your answer...' : interactiveChoice.title}</span>
+								{!lockedChoice && <button type="button" onClick={() => setInteractiveChoice(null)} className="text-[11px] text-[var(--color-text-faint)] hover:opacity-80 cursor-pointer">Dismiss</button>}
 							</div>
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-								{interactiveChoice.options.map((opt, idx) => (
-									<button type="button" key={idx} onClick={() => (setInteractiveChoice(null), sendPrompt(opt))} className="flex items-center gap-2.5 p-2 rounded-lg bg-[var(--color-bg)] hover:opacity-80 border border-[var(--color-border)] text-left text-xs text-[var(--color-text)] cursor-pointer">
-										<span className="w-5 h-5 rounded bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[11px] text-[var(--color-text-muted)] shrink-0">{idx + 1}</span>
-										<span className="flex-1 font-medium">{opt}</span>
-									</button>
-								))}
+							<div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+								{interactiveChoice.options.map((opt, idx) => {
+									const isPicked = lockedChoice === opt
+									const isDisabled = !!lockedChoice
+									return (
+										<button
+											type="button"
+											key={idx}
+											onClick={() => !isDisabled && pickChoice(opt)}
+											disabled={isDisabled}
+											className={`flex items-center gap-2.5 p-2 rounded-lg border text-left text-xs cursor-pointer ${isPicked ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : isDisabled ? 'bg-[var(--color-bg)] border-[var(--color-border)] text-[var(--color-text-faint)] opacity-40 cursor-not-allowed' : 'bg-[var(--color-bg)] border-[var(--color-border)] text-[var(--color-text)] hover:opacity-80'}`}
+										>
+											<span className={`w-5 h-5 rounded flex items-center justify-center text-[11px] shrink-0 border ${isPicked ? 'bg-white/20 border-white/30 text-white' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>{idx + 1}</span>
+											<span className="flex-1 font-medium">{opt}</span>
+										</button>
+									)
+								})}
 							</div>
 						</div>
 					)}
@@ -273,7 +296,7 @@ export const Component = () => {
 						</div>
 					)}
 
-					{!!messages.length && renderInputCard(interactiveChoice ? "Pick an option above or type here..." : "Reply to Veribot...")}
+					{!!messages.length && renderInputCard(interactiveChoice ? "Or type your own answer here..." : "Reply to Veribot...")}
 
 					<div className="text-center text-[11px] text-[var(--color-text-faint)]">
 						<span>AI can make mistakes. Please double-check responses.</span>
