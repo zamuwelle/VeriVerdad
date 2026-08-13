@@ -8,14 +8,15 @@ use Illuminate\Support\Facades\Http;
 
 class GroqService
 {
+	protected static $cooldowns = [];
+
 	public function chat($messages, $tools = null, $model = null)
 	{
 		$keys = Config::get('groq.keys');
 		$model = $model ?? Config::get('groq.model');
-		$cooldowns = [];
 
 		foreach ($keys as $index => $key) {
-			if (isset($cooldowns[$index]) && $cooldowns[$index] > now()) {
+			if (isset(self::$cooldowns[$index]) && self::$cooldowns[$index] > now()) {
 				continue;
 			}
 
@@ -57,14 +58,12 @@ class GroqService
 				if ($response->status() === 429) {
 					$retryAfter = $response->header('Retry-After');
 					$cooldownSeconds = is_numeric($retryAfter) ? (int) $retryAfter : 60;
-					$cooldowns[$index] = now()->addSeconds($cooldownSeconds);
-
+					self::$cooldowns[$index] = now()->addSeconds($cooldownSeconds);
 					continue;
 				}
 
 				if ($response->status() === 401) {
-					$cooldowns[$index] = now()->addYear();
-
+					self::$cooldowns[$index] = now()->addYear();
 					continue;
 				}
 
