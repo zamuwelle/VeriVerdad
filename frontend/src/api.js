@@ -30,7 +30,7 @@ export const register = payload => api.post('/register', payload).then(({ data }
 
 export const logout = () => api.post('/logout').finally(clearAuth)
 
-export const sendMessage = (message, conversationId, messageId) => api.post('/chat', { message, conversation_id: conversationId, message_id: messageId })
+export const sendMessage = (message, conversationId, verify = false) => api.post('/chat', { message, conversation_id: conversationId, verify })
 
 export const getConversations = () => api.get('/chats')
 
