@@ -30,12 +30,12 @@ export const Component = () => {
 
 	const loginMutation = useMutation({
 		mutationFn: login,
-		onSuccess: res => (setAuth(res.data), navigate('/home'))
+		onSuccess: res => (setAuth(res.data), navigate('/veribot'))
 	})
 
 	const regMutation = useMutation({
 		mutationFn: register,
-		onSuccess: res => (setAuth(res.data), navigate('/home'))
+		onSuccess: res => (setAuth(res.data), navigate('/veribot'))
 	})
 
 	useEffect(() => {
