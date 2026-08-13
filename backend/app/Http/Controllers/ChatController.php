@@ -3,13 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Services\ChatService;
+use Illuminate\Http\Request;
 
 class ChatController extends Controller
 {
-	public function chat()
+	public function chat(Request $request)
 	{
 		try {
-			$result = app(ChatService::class)->sendMessage(auth()->id(), request('conversation_id'), request('message'), request('message_id'));
+			$chat = app(ChatService::class);
+			$result = $chat->sendMessage(
+				auth()->id(),
+				$request->input('conversation_id'),
+				$request->input('message'),
+				$request->input('message_id'),
+				$request->boolean('verify')
+			);
 			return response()->json([
 				'conversation_id' => $result['conversation']->id,
 				'reply' => $result['reply'],
