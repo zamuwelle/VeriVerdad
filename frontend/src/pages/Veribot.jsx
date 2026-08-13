@@ -3,11 +3,31 @@ import { useParams, useNavigate } from 'react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Sidebar } from '../components/Sidebar'
 import { UpArrowIcon, EditIcon, CopyIcon, Chevron } from '../components/Icons'
 import { sendMessage, getConversation } from '../api'
 
 const getTime = d => new Date(d || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+export const CodeBlock = ({ language, value }) => {
+	const [copied, setCopied] = useState(false)
+	const handleCopy = () => (navigator.clipboard.writeText(value), setCopied(true), setTimeout(() => setCopied(false), 2000))
+	return (
+		<div className="relative my-3 rounded-lg overflow-hidden border border-[var(--color-border)] bg-[var(--color-bg)] text-xs">
+			<div className="flex items-center justify-between px-3 py-1.5 bg-[var(--color-surface)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] font-mono">
+				<span>{language || 'text'}</span>
+				<button type="button" onClick={handleCopy} title={copied ? 'Copied!' : 'Copy'} className="hover:opacity-80 text-[var(--color-text)] cursor-pointer">
+					<CopyIcon style={{ width: '14px', height: '14px' }} />
+				</button>
+			</div>
+			<SyntaxHighlighter language={language || 'text'} style={oneDark} customStyle={{ margin: 0, padding: '12px', fontSize: '12px', borderRadius: 0 }}>
+				{value}
+			</SyntaxHighlighter>
+		</div>
+	)
+}
 
 export const Thinking = ({ reasoning, thinkTime, isThinkingActive = false }) => {
 	const [isOpen, setIsOpen] = useState(true)
@@ -44,7 +64,7 @@ export const Component = () => {
 	const scrollContainerRef = useRef(null)
 	const textareaRef = useRef(null)
 
-	const scroll = () => setTimeout(() => scrollContainerRef.current?.scrollTo({ top: scrollContainerRef.current.scrollHeight }), 10)
+	const scroll = () => setTimeout(() => scrollContainerRef.current?.scrollTo({ top: scrollContainerRef.current.scrollHeight }), 20)
 
 	useEffect(() => {
 		if (routeId) {
@@ -55,6 +75,10 @@ export const Component = () => {
 		} else (setConversationId(null), setMessages([]))
 	}, [routeId])
 
+	useEffect(() => {
+		messages.length && scroll()
+	}, [messages.length])
+
 	const chatMutation = useMutation({
 		mutationFn: ({ message, id, messageId }) => sendMessage(message, id, messageId),
 		onSuccess: res => {
@@ -62,7 +86,6 @@ export const Component = () => {
 			const targetId = res.data.conversation?.id || res.data.conversation_id
 			targetId && (setConversationId(targetId), !routeId && navigate(`/veribot/${targetId}`, { replace: true }))
 			setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: res.data.reply, reasoning: res.data.reasoning, timestamp: getTime(res.data.created_at) }])
-			scroll()
 		}
 	})
 
@@ -80,7 +103,6 @@ export const Component = () => {
 			textareaRef.current && (textareaRef.current.style.height = 'auto')
 		}
 		setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: text, timestamp: getTime() }])
-		scroll()
 		chatMutation.mutate({ message: text, id: conversationId, messageId: editMessageId })
 	}
 
@@ -120,27 +142,36 @@ export const Component = () => {
 								<div key={msg.id} className="group flex flex-col space-y-1">
 									<div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
 										<div onDoubleClick={() => msg.role === 'user' && (setEditingId(msg.id), setEditText(msg.content))} className={`max-w-[88%] rounded-lg px-4 py-2.5 text-sm text-[var(--color-text)] ${editingId === msg.id ? 'border border-[var(--color-border)]' : msg.role === 'user' ? 'bg-[var(--color-surface)] cursor-pointer select-none' : ''}`}>
-											{msg.role === 'assistant' && msg.reasoning && <Thinking reasoning={msg.reasoning} thinkTime={msg.thinkTime} />}
 											{editingId === msg.id ? (
 												<textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), saveEditing(msg.id))} rows={1} style={{ fieldSizing: 'content' }} className="w-full min-w-[280px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-0 text-sm text-[var(--color-text)] resize-none" />
-											) : msg.role === 'assistant' ? (
-												<ReactMarkdown
-													remarkPlugins={[remarkGfm]}
-													components={{
-														a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:opacity-80" />,
-														table: ({ node, ...props }) => <div className="overflow-x-auto my-2"><table {...props} className="w-full border-collapse border border-[var(--color-border)] text-xs" /></div>,
-														th: ({ node, ...props }) => <th {...props} className="border border-[var(--color-border)] bg-[var(--color-bg)] p-2 font-semibold text-left text-[var(--color-text)]" />,
-														td: ({ node, ...props }) => <td {...props} className="border border-[var(--color-border)] p-2 text-[var(--color-text)]" />,
-														ul: ({ node, ...props }) => <ul {...props} className="list-disc ml-4 space-y-1 my-1" />,
-														ol: ({ node, ...props }) => <ol {...props} className="list-decimal ml-4 space-y-1 my-1" />,
-														p: ({ node, ...props }) => <p {...props} className="whitespace-pre-wrap leading-relaxed my-1" />,
-														code: ({ node, inline, ...props }) => inline ? <code {...props} className="bg-[var(--color-bg)] text-[var(--color-primary)] px-1 py-0.5 rounded text-xs border border-[var(--color-border)]" /> : <pre className="bg-[var(--color-bg)] p-3 rounded-lg overflow-x-auto my-2 border border-[var(--color-border)] text-xs text-[var(--color-text)]"><code {...props} /></pre>
-													}}
-												>
-													{msg.content}
-												</ReactMarkdown>
 											) : (
-												<p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+												<>
+													{msg.role === 'assistant' && msg.reasoning && <Thinking reasoning={msg.reasoning} thinkTime={msg.thinkTime} />}
+													<ReactMarkdown
+														remarkPlugins={[remarkGfm]}
+														components={{
+															a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:opacity-80" />,
+															table: ({ node, ...props }) => <div className="overflow-x-auto my-2"><table {...props} className="w-full border-collapse border border-[var(--color-border)] text-xs" /></div>,
+															th: ({ node, ...props }) => <th {...props} className="border border-[var(--color-border)] bg-[var(--color-bg)] p-2 font-semibold text-left text-[var(--color-text)]" />,
+															td: ({ node, ...props }) => <td {...props} className="border border-[var(--color-border)] p-2 text-[var(--color-text)]" />,
+															ul: ({ node, ...props }) => <ul {...props} className="list-disc ml-4 space-y-1 my-1" />,
+															ol: ({ node, ...props }) => <ol {...props} className="list-decimal ml-4 space-y-1 my-1" />,
+															p: ({ node, ...props }) => <p {...props} className="whitespace-pre-wrap leading-relaxed my-1" />,
+															code: ({ node, className, children, ...props }) => {
+																const match = /language-(\w+)/.exec(className || '')
+																return match ? (
+																	<CodeBlock language={match[1]} value={String(children).replace(/\n$/, '')} />
+																) : (
+																	<code {...props} className="bg-[var(--color-bg)] text-[var(--color-primary)] px-1 py-0.5 rounded text-xs border border-[var(--color-border)]">
+																		{children}
+																	</code>
+																)
+															}
+														}}
+													>
+														{msg.content}
+													</ReactMarkdown>
+												</>
 											)}
 										</div>
 										{editingId === msg.id && (
