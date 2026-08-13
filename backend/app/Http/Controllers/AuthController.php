@@ -43,8 +43,10 @@ class AuthController extends Controller
 
 	public function users()
 	{
-		// Get all users except the currently logged-in user
-		$users = User::select('id', 'username')->get();
+		$users = User::select('id', 'username')
+			->withCount('conversations')
+			->orderByDesc('conversations_count')
+			->get();
 
 		return $this->success($users);
 	}

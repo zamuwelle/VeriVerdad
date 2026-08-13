@@ -29,9 +29,11 @@ export const Component = () => {
 
 						{!loading && (!users ? [] : users).map((user, index) => (
 							<p key={user.id} className="text-center">
-								{index + 1}. {user.username}
+								{index + 1}. {user.username} - {user.conversations_count}
 							</p>
 						))}
+
+						{!loading && console.log(users)}
 					</div>
 				</main>
 			</div>
