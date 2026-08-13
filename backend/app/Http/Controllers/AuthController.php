@@ -44,7 +44,9 @@ class AuthController extends Controller
 	public function users()
 	{
 		// Get all users except the currently logged-in user
-		$users = User::select('id', 'username')->get();
+		$users = User::where('id', '!=', auth()->id())
+			->select('id', 'username')
+			->get();
 
 		return $this->success($users);
 	}
