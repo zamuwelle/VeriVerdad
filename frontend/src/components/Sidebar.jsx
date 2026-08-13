@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { RobotIcon, LogoutIcon, HomeIcon, Chevron, TrashIcon } from '../components/Icons'
+import { RobotIcon, LogoutIcon, HistoryIcon, Chevron, TrashIcon } from '../components/Icons'
 import { ConfirmationModal } from './ConfirmationModal'
 import { logout, getConversations, deleteConversation, updateConversation } from '../api'
 
 const navItems = [
-	{ path: '/home', label: 'Home', Icon: HomeIcon },
-	{ path: '/veribot', label: 'Veribot', Icon: RobotIcon }
+	{ path: '/veribot', label: 'Veribot', Icon: RobotIcon },
+	{ path: '/history', label: 'History', Icon: HistoryIcon },
 ]
 
 const toTitleCase = str => str ? str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : ''
@@ -65,53 +65,51 @@ export const Sidebar = () => {
 
 					<nav className="flex flex-col gap-1 flex-1 overflow-hidden">
 						{navItems.map(item => {
-							const isActive = item.path === '/veribot' ? location.pathname.startsWith('/veribot') : location.pathname === item.path
+							const isActive = location.pathname === item.path
 							return (
 								<div key={item.path} className="flex flex-col gap-1">
 									<Link to={item.path} onClick={() => setOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold no-underline hover:opacity-80 ${isActive ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text-muted)] bg-transparent'}`}>
 										<item.Icon className="w-5 h-5 shrink-0" />
 										<span>{item.label}</span>
 									</Link>
-
-									{item.path === '/veribot' && (
-										<div className="flex flex-col gap-1 pt-2 flex-1 overflow-hidden">
-											<div className="flex items-center px-3 py-1 text-xs text-[var(--color-text-muted)] select-none">
-												<button type="button" onClick={() => setRecentsOpen(!recentsOpen)} className="group flex items-center gap-1 hover:opacity-80 cursor-pointer">
-													<span className="font-medium">Recents</span>
-													<span className="opacity-0 group-hover:opacity-100">
-														<Chevron open={recentsOpen} />
-													</span>
-												</button>
-											</div>
-
-											{recentsOpen && (
-												<div className="flex flex-col gap-0.5 overflow-y-auto flex-1">
-													{(Array.isArray(chats) ? chats : []).map(chat => {
-														const isChatActive = location.pathname === `/veribot/${chat.id}`
-														const chatTitle = toTitleCase(chat.title || chat.first_message || 'Untitled Chat')
-														return (
-															<div key={chat.id} className={`group flex items-center justify-between rounded-full px-3.5 py-2 text-xs hover:opacity-80 ${isChatActive ? 'bg-[var(--color-bg)] text-[var(--color-text)] font-semibold' : 'text-[var(--color-text)] bg-transparent font-normal'}`}>
-																{editingId === chat.id ? (
-																	<input type="text" autoFocus value={editTitle} onChange={e => setEditTitle(e.target.value)} onBlur={() => saveRename(chat.id)} onKeyDown={e => e.key === 'Enter' && saveRename(chat.id)} className="bg-transparent border border-[var(--color-border)] rounded px-1.5 py-0.5 text-xs text-[var(--color-text)] outline-none flex-1 w-full" />
-																) : (
-																	<Link to={`/veribot/${chat.id}`} onDoubleClick={() => (setEditingId(chat.id), setEditTitle(chatTitle))} onClick={() => setOpen(false)} className="truncate flex-1 no-underline text-inherit select-none">
-																		{chatTitle}
-																	</Link>
-																)}
-																<button type="button" onClick={e => (e.stopPropagation(), e.preventDefault(), setDeleteTarget({ id: chat.id, title: chatTitle }))} className="opacity-0 group-hover:opacity-100 p-0.5 hover:opacity-80 text-[var(--color-text-faint)] cursor-pointer shrink-0">
-																	<TrashIcon style={{ width: '14px', height: '14px' }} />
-																</button>
-															</div>
-														)
-													})}
-												</div>
-											)}
-										</div>
-									)}
 								</div>
 							)
 						})}
 					</nav>
+
+					<div className="flex flex-col gap-1 pt-2 flex-1 overflow-hidden">
+						<div className="flex items-center px-3 py-1 text-xs text-[var(--color-text-muted)] select-none">
+							<button type="button" onClick={() => setRecentsOpen(!recentsOpen)} className="group flex items-center gap-1 hover:opacity-80 cursor-pointer">
+								<span className="font-medium">Recents</span>
+								<span className="opacity-0 group-hover:opacity-100">
+									<Chevron open={recentsOpen} />
+								</span>
+							</button>
+						</div>
+
+						{recentsOpen && (
+							<div className="flex flex-col gap-0.5 overflow-y-auto flex-1">
+								{(Array.isArray(chats) ? chats : []).map(chat => {
+									const isChatActive = location.pathname === `/veribot/${chat.id}`
+									const chatTitle = toTitleCase(chat.title || chat.first_message || 'Untitled Chat')
+									return (
+										<div key={chat.id} className={`group flex items-center justify-between rounded-full px-3.5 py-2 text-xs hover:opacity-80 ${isChatActive ? 'bg-[var(--color-bg)] text-[var(--color-text)] font-semibold' : 'text-[var(--color-text)] bg-transparent font-normal'}`}>
+											{editingId === chat.id ? (
+												<input type="text" autoFocus value={editTitle} onChange={e => setEditTitle(e.target.value)} onBlur={() => saveRename(chat.id)} onKeyDown={e => e.key === 'Enter' && saveRename(chat.id)} className="bg-transparent border border-[var(--color-border)] rounded px-1.5 py-0.5 text-xs text-[var(--color-text)] outline-none flex-1 w-full" />
+											) : (
+												<Link to={`/veribot/${chat.id}`} onDoubleClick={() => (setEditingId(chat.id), setEditTitle(chatTitle))} onClick={() => setOpen(false)} className="truncate flex-1 no-underline text-inherit select-none">
+													{chatTitle}
+												</Link>
+											)}
+											<button type="button" onClick={e => (e.stopPropagation(), e.preventDefault(), setDeleteTarget({ id: chat.id, title: chatTitle }))} className="opacity-0 group-hover:opacity-100 p-0.5 hover:opacity-80 text-[var(--color-text-faint)] cursor-pointer shrink-0">
+												<TrashIcon style={{ width: '14px', height: '14px' }} />
+											</button>
+										</div>
+									)
+								})}
+							</div>
+						)}
+					</div>
 				</div>
 
 				<div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-bg)] shrink-0">
