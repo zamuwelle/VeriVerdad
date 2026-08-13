@@ -8,10 +8,10 @@ use Illuminate\Support\Facades\Http;
 
 class GroqService
 {
-	public function chat($messages)
+	public function chat($messages, $tools = null, $model = null)
 	{
 		$keys = Config::get('groq.keys');
-		$model = Config::get('groq.model');
+		$model = $model ?? Config::get('groq.model');
 		$cooldowns = [];
 
 		foreach ($keys as $index => $key) {
@@ -20,16 +20,20 @@ class GroqService
 			}
 
 			try {
+				$payload = [
+					'model' => $model,
+					'messages' => $messages,
+					'max_completion_tokens' => 1024,
+					'temperature' => 0.7,
+					'include_reasoning' => true,
+					'reasoning_effort' => 'medium',
+				];
+
+				if ($tools) $payload['tools'] = $tools;
+
 				$response = Http::withToken($key)
 					->timeout(60)
-					->post('https://api.groq.com/openai/v1/chat/completions', [
-						'model' => $model,
-						'messages' => $messages,
-						'max_completion_tokens' => 1024,
-						'temperature' => 0.7,
-						'include_reasoning' => true,
-						'reasoning_effort' => 'medium',
-					]);
+					->post('https://api.groq.com/openai/v1/chat/completions', $payload);
 
 				if ($response->successful()) {
 					$data = $response->json();
@@ -45,6 +49,7 @@ class GroqService
 							'prompt_tokens' => $usage['prompt_tokens'] ?? 0,
 							'completion_tokens' => $usage['completion_tokens'] ?? 0,
 							'total_tokens' => $usage['total_tokens'] ?? 0,
+							'total_time' => $usage['total_time'] ?? null,
 						],
 					];
 				}
