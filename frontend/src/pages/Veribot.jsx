@@ -12,6 +12,29 @@ import { sendMessage, getConversation } from '../api'
 
 const getTime = d => new Date(d || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
+const hasToken = (s, token) => new RegExp(`\\\\?\\[${token}\\\\?\\]`).test(s)
+
+const stripTokens = s => s
+	?.replace(/【[^】]*】/gu, '')
+	?.replace(/\\?\[VERIFY\\?\]/g, '')
+	?.replace(/\\?\[OFFER_QUIZ\\?\]/g, '')
+	?.replace(/\\?\[CONTINUE_QUIZ\\?\]/g, '')
+	?.replace(/\\?\[CHOICES:[^\]]*\]/g, '')
+	?.replace(/\\?\[QUIZ_START\\?\][\s\S]*?\\?\[QUIZ_END\\?\]/g, '')
+	?.trim() || ''
+
+const parseQuiz = raw => {
+	const match = raw.match(/\[QUIZ_START\]([\s\S]+?)\[QUIZ_END\]/)
+	if (!match) return null
+	const block = match[1]
+	return [1, 2, 3].map(i => {
+		const q = block.match(new RegExp(`Q${i}:\\s*(.+)`))
+		const c = block.match(new RegExp(`C${i}:\\s*(.+)`))
+		const choices = (c?.[1] || '').split('|').map(x => x.trim()).filter(Boolean)
+		return { scenario: q?.[1]?.trim() || '', choices }
+	}).filter(q => q.scenario && q.choices.length)
+}
+
 export const CodeBlock = ({ language, value }) => {
 	const [copied, setCopied] = useState(false)
 	const handleCopy = () => (navigator.clipboard.writeText(value), setCopied(true), setTimeout(() => setCopied(false), 2000))
@@ -60,8 +83,9 @@ export const Component = () => {
 	const [input, setInput] = useState('')
 	const [editingId, setEditingId] = useState(null)
 	const [editText, setEditText] = useState('')
-	const [interactiveChoice, setInteractiveChoice] = useState(null)
-	const [lockedChoice, setLockedChoice] = useState(null)
+	const [quizData, setQuizData] = useState(null)
+	const [quizAnswers, setQuizAnswers] = useState({})
+	const [lastAssistantId, setLastAssistantId] = useState(null)
 	const [conversationId, setConversationId] = useState(routeId || null)
 	const scrollContainerRef = useRef(null)
 	const textareaRef = useRef(null)
@@ -76,25 +100,31 @@ export const Component = () => {
 			setConversationId(routeId)
 			getConversation(routeId).then(res => {
 				const list = res?.messages || res?.data?.messages || (Array.isArray(res?.data) ? res.data : [])
-				setMessages(list.map((m, i) => {
+				let lastAssistant = null
+				const mapped = list.map((m, i) => {
 					const prev = list[i - 1]
 					const diff = prev?.created_at && m.created_at ? Math.max(1, Math.round((new Date(m.created_at) - new Date(prev.created_at)) / 1000)) : 1
+					m.role === 'assistant' && (lastAssistant = m.id)
 					return {
 						...m,
 						timestamp: getTime(m.created_at),
 						thinkTime: `${diff} second${diff === 1 ? '' : 's'}`,
-						hasVerify: m.content?.includes('[VERIFY]'),
-						hasOfferQuiz: m.content?.includes('[OFFER_QUIZ]'),
-						hasContinueQuiz: m.content?.includes('[CONTINUE_QUIZ]'),
-						content: m.content?.replace('[VERIFY]', '')?.replace('[OFFER_QUIZ]', '')?.replace('[CONTINUE_QUIZ]', '')?.replace(/\[CHOICES:[^\]]+\]/, '')?.trim() || ''
+						hasVerify: false,
+						hasOfferQuiz: false,
+						content: stripTokens(m.content)
 					}
-				}))
+				})
+				setMessages(mapped)
+				setLastAssistantId(lastAssistant)
+				setTimeout(() => textareaRef.current?.focus(), 50)
 			})
 		} else {
 			setConversationId(null)
 			setMessages([])
-			setInteractiveChoice(null)
-			setLockedChoice(null)
+			setQuizData(null)
+			setQuizAnswers({})
+			setLastAssistantId(null)
+			setTimeout(() => textareaRef.current?.focus(), 50)
 		}
 	}, [routeId])
 
@@ -108,15 +138,15 @@ export const Component = () => {
 			queryClient.invalidateQueries({ queryKey: ['chats'] })
 			if (res.data.conversation_id) (setConversationId(res.data.conversation_id), !routeId && navigate(`/veribot/${res.data.conversation_id}`, { replace: true }))
 			const raw = res.data.reply || ''
-			const hasVerify = raw.includes('[VERIFY]')
-			const hasOfferQuiz = raw.includes('[OFFER_QUIZ]')
-			const hasContinueQuiz = raw.includes('[CONTINUE_QUIZ]')
-			const choicesMatch = raw.match(/\[CHOICES:\s*([\s\S]+?)\]/)
-			const reply = raw.replace('[VERIFY]', '').replace('[OFFER_QUIZ]', '').replace('[CONTINUE_QUIZ]', '').replace(/\[CHOICES:\s*[\s\S]+?\]/, '').trim()
+			const hasOfferQuiz = hasToken(raw, 'OFFER_QUIZ')
+			const hasVerify = hasToken(raw, 'VERIFY') && !hasOfferQuiz
+			const quiz = parseQuiz(raw)
+			const reply = stripTokens(raw)
 			const totalTime = res.data.usage?.total_time
 			const elapsed = totalTime ? Math.max(1, Math.round(totalTime)) : Math.max(1, Math.round((Date.now() - (requestStartTimeRef.current || Date.now())) / 1000))
+			const newId = crypto.randomUUID()
 			setMessages(prev => [...prev, {
-				id: crypto.randomUUID(),
+				id: newId,
 				role: 'assistant',
 				content: reply,
 				reasoning: res.data.reasoning,
@@ -125,12 +155,15 @@ export const Component = () => {
 				hasVerify,
 				hasOfferQuiz
 			}])
-			setLockedChoice(null)
-			if (choicesMatch) setInteractiveChoice({ title: 'Pick an answer or type your own below', options: choicesMatch[1].split('|').map(o => o.trim()) })
-			else setInteractiveChoice(null)
+			setLastAssistantId(newId)
+			if (quiz) {
+				setQuizData(quiz)
+				setQuizAnswers({})
+			} else {
+				setQuizData(null)
+			}
 			setTimeout(() => scrollContainerRef.current?.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior: 'smooth' }), 10)
-		},
-		onError: () => setLockedChoice(null)
+		}
 	})
 
 	const sendPrompt = (textToSend, verify = false, hidden = false) => {
@@ -143,20 +176,20 @@ export const Component = () => {
 		}
 		requestStartTimeRef.current = Date.now()
 		if (!hidden) setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: text, timestamp: getTime() }])
-		setInteractiveChoice(null)
+		setQuizData(null)
 		chatMutation.mutate({ message: text, id: conversationId, verify })
 	}
 
-	const pickChoice = opt => {
-		setLockedChoice(opt)
-		sendPrompt(opt)
+	const submitQuiz = () => {
+		const answers = quizData.map((_, i) => `Q${i + 1}: ${quizAnswers[i]}`).join(' | ')
+		sendPrompt(answers, false, false)
 	}
 
 	const saveEditing = id => editText.trim() && sendPrompt(editText.trim())
 
 	const renderInputCard = placeholderText => (
 		<div className="w-full bg-[var(--color-surface)] rounded-2xl p-3.5 space-y-3 border border-[var(--color-border)]">
-			<textarea ref={textareaRef} value={input} onChange={e => (setInput(e.target.value), textareaRef.current && (textareaRef.current.style.height = 'auto', textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`))} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendPrompt())} placeholder={placeholderText} rows={2} className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-sm p-1 pr-2 text-[var(--color-text)] placeholder-[var(--color-text-faint)] resize-none min-h-[44px] max-h-[200px]" />
+			<textarea autoFocus ref={textareaRef} value={input} onChange={e => (setInput(e.target.value), textareaRef.current && (textareaRef.current.style.height = 'auto', textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`))} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendPrompt())} placeholder={placeholderText} rows={2} className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-sm p-1 pr-2 text-[var(--color-text)] placeholder-[var(--color-text-faint)] resize-none min-h-[44px] max-h-[200px]" />
 			<div className="flex items-center justify-end">
 				<button type="button" onClick={() => sendPrompt()} disabled={!input.trim() || chatMutation.isPending} className="p-1.5 bg-[var(--color-primary)] hover:opacity-80 text-white rounded-lg disabled:opacity-20 cursor-pointer">
 					<UpArrowIcon className="w-4 h-4" />
@@ -164,6 +197,26 @@ export const Component = () => {
 			</div>
 		</div>
 	)
+
+	const mdComponents = {
+		a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:opacity-80" />,
+		table: ({ node, ...props }) => <div className="overflow-x-auto my-2"><table {...props} className="w-full border-collapse border border-[var(--color-border)] text-xs" /></div>,
+		th: ({ node, ...props }) => <th {...props} className="border border-[var(--color-border)] bg-[var(--color-bg)] p-2 font-semibold text-left text-[var(--color-text)]" />,
+		td: ({ node, ...props }) => <td {...props} className="border border-[var(--color-border)] p-2 text-[var(--color-text)]" />,
+		ul: ({ node, ...props }) => <ul {...props} className="list-disc ml-4 space-y-1 my-1" />,
+		ol: ({ node, ...props }) => <ol {...props} className="list-decimal ml-4 space-y-1 my-1" />,
+		p: ({ node, ...props }) => <p {...props} className="whitespace-pre-wrap leading-relaxed my-1" />,
+		code: ({ node, className, children, ...props }) => {
+			const match = /language-(\w+)/.exec(className || '')
+			return match ? (
+				<CodeBlock language={match[1]} value={String(children).replace(/\n$/, '')} />
+			) : (
+				<code {...props} className="bg-[var(--color-bg)] text-[var(--color-primary)] px-1 py-0.5 rounded text-xs border border-[var(--color-border)]">
+					{children}
+				</code>
+			)
+		}
+	}
 
 	return (
 		<div className="h-screen flex flex-col lg:flex-row bg-[var(--color-bg)] text-[var(--color-text)] overflow-hidden">
@@ -180,7 +233,7 @@ export const Component = () => {
 					) : (
 						<div className="p-4 md:p-6 space-y-6 max-w-3xl mx-auto w-full">
 							{messages.map(msg => {
-								const isLastAssistant = msg.id === messages.slice().reverse().find(m => m.role === 'assistant')?.id
+								const isLastAssistant = msg.id === lastAssistantId
 								return (
 									<div key={msg.id} className="group flex flex-col space-y-1">
 										<div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
@@ -190,34 +243,13 @@ export const Component = () => {
 												) : (
 													<>
 														{msg.role === 'assistant' && msg.reasoning && <Thinking reasoning={msg.reasoning} thinkTime={msg.thinkTime} />}
-														<ReactMarkdown
-															remarkPlugins={[remarkGfm]}
-															components={{
-																a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:opacity-80" />,
-																table: ({ node, ...props }) => <div className="overflow-x-auto my-2"><table {...props} className="w-full border-collapse border border-[var(--color-border)] text-xs" /></div>,
-																th: ({ node, ...props }) => <th {...props} className="border border-[var(--color-border)] bg-[var(--color-bg)] p-2 font-semibold text-left text-[var(--color-text)]" />,
-																td: ({ node, ...props }) => <td {...props} className="border border-[var(--color-border)] p-2 text-[var(--color-text)]" />,
-																ul: ({ node, ...props }) => <ul {...props} className="list-disc ml-4 space-y-1 my-1" />,
-																ol: ({ node, ...props }) => <ol {...props} className="list-decimal ml-4 space-y-1 my-1" />,
-																p: ({ node, ...props }) => <p {...props} className="whitespace-pre-wrap leading-relaxed my-1" />,
-																code: ({ node, className, children, ...props }) => {
-																	const match = /language-(\w+)/.exec(className || '')
-																	return match ? (
-																		<CodeBlock language={match[1]} value={String(children).replace(/\n$/, '')} />
-																	) : (
-																		<code {...props} className="bg-[var(--color-bg)] text-[var(--color-primary)] px-1 py-0.5 rounded text-xs border border-[var(--color-border)]">
-																			{children}
-																		</code>
-																	)
-																}
-															}}
-														>
+														<ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
 															{msg.content}
 														</ReactMarkdown>
 
 														{msg.role === 'assistant' && isLastAssistant && msg.hasVerify && (
 															<div className="pt-1.5">
-																<button type="button" disabled={chatMutation.isPending} onClick={() => sendPrompt('Verify this claim with real sources and evidence.', true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium text-[var(--color-text)] cursor-pointer">
+																<button type="button" disabled={chatMutation.isPending} onClick={() => sendPrompt('Verify this claim with real sources and evidence.', true, true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium text-[var(--color-text)] cursor-pointer">
 																	<SearchIcon style={{ width: '14px', height: '14px' }} />
 																	<span>Verify this claim with web sources</span>
 																</button>
@@ -226,7 +258,7 @@ export const Component = () => {
 
 														{msg.role === 'assistant' && isLastAssistant && msg.hasOfferQuiz && (
 															<div className="pt-1.5">
-																<button type="button" disabled={chatMutation.isPending} onClick={() => sendPrompt('Test my instincts on this with a quick quiz question.', false, true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium text-[var(--color-text)] cursor-pointer">
+																<button type="button" disabled={chatMutation.isPending} onClick={() => sendPrompt('Give me the quiz on this.', false, true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium text-[var(--color-text)] cursor-pointer">
 																	<GameControllerIcon style={{ width: '14px', height: '14px' }} />
 																	<span>Test your instincts (Quiz)</span>
 																</button>
@@ -253,7 +285,7 @@ export const Component = () => {
 								)
 							})}
 
-							{chatMutation.isPending && !lockedChoice && (
+							{chatMutation.isPending && (
 								<div className="flex flex-col items-start max-w-[88%]">
 									<div className="p-3 rounded-xl w-full">
 										<Thinking isThinkingActive={true} />
@@ -265,30 +297,33 @@ export const Component = () => {
 				</div>
 
 				<div className="p-4 shrink-0 bg-[var(--color-bg)] max-w-3xl w-full mx-auto space-y-3">
-					{interactiveChoice && (
-						<div className="bg-[var(--color-surface)] rounded-xl p-3.5 space-y-2 border border-[var(--color-border)]">
-							<div className="flex items-center justify-between px-0.5">
-								<span className="text-xs font-semibold text-[var(--color-text)]">{lockedChoice ? 'Checking your answer...' : interactiveChoice.title}</span>
-								{!lockedChoice && <button type="button" onClick={() => setInteractiveChoice(null)} className="text-[11px] text-[var(--color-text-faint)] hover:opacity-80 cursor-pointer">Dismiss</button>}
-							</div>
-							<div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-								{interactiveChoice.options.map((opt, idx) => {
-									const isPicked = lockedChoice === opt
-									const isDisabled = !!lockedChoice
-									return (
-										<button
-											type="button"
-											key={idx}
-											onClick={() => !isDisabled && pickChoice(opt)}
-											disabled={isDisabled}
-											className={`flex items-center gap-2.5 p-2 rounded-lg border text-left text-xs cursor-pointer ${isPicked ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : isDisabled ? 'bg-[var(--color-bg)] border-[var(--color-border)] text-[var(--color-text-faint)] opacity-40 cursor-not-allowed' : 'bg-[var(--color-bg)] border-[var(--color-border)] text-[var(--color-text)] hover:opacity-80'}`}
-										>
-											<span className={`w-5 h-5 rounded flex items-center justify-center text-[11px] shrink-0 border ${isPicked ? 'bg-white/20 border-white/30 text-white' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>{idx + 1}</span>
-											<span className="flex-1 font-medium">{opt}</span>
-										</button>
-									)
-								})}
-							</div>
+					{quizData && (
+						<div className="space-y-3">
+							{quizData.map((q, qi) => (
+								<div key={qi} className="bg-[var(--color-surface)] rounded-xl p-3.5 border border-[var(--color-border)] space-y-2">
+									<p className="text-xs text-[var(--color-text)] leading-relaxed">{q.scenario}</p>
+									<div className="flex flex-col gap-1.5">
+										{q.choices.map((opt, oi) => {
+											const isPicked = quizAnswers[qi] === opt
+											return (
+												<button
+													type="button"
+													key={oi}
+													onClick={() => setQuizAnswers(prev => ({ ...prev, [qi]: opt }))}
+													className={`w-full p-2.5 rounded-lg border text-left text-xs transition-all cursor-pointer font-medium leading-relaxed ${isPicked ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-bg)] text-[var(--color-text)] border-[var(--color-border)] hover:border-[var(--color-primary)] hover:opacity-80'}`}
+												>
+													{opt}
+												</button>
+											)
+										})}
+									</div>
+								</div>
+							))}
+							{Object.keys(quizAnswers).length === quizData.length && (
+								<button type="button" onClick={submitQuiz} disabled={chatMutation.isPending} className="w-full py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-80 disabled:opacity-50 cursor-pointer">
+									Submit Answers
+								</button>
+							)}
 						</div>
 					)}
 
@@ -298,7 +333,7 @@ export const Component = () => {
 						</div>
 					)}
 
-					{!!messages.length && renderInputCard(interactiveChoice ? "Or type your own answer here..." : "Reply to Veribot...")}
+					{!!messages.length && renderInputCard(quizData ? 'Or type your own answer...' : 'Reply to Veribot...')}
 
 					<div className="text-center text-[11px] text-[var(--color-text-faint)]">
 						<span>AI can make mistakes. Please double-check responses.</span>
