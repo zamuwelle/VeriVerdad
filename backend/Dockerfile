@@ -16,6 +16,8 @@ WORKDIR /app
 
 COPY . .
 
+RUN touch /app/database/database.sqlite && chown www-data:www-data /app/database/database.sqlite
+
 RUN composer install --no-interaction --optimize-autoloader --no-dev
 
 RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
