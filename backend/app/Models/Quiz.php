@@ -5,13 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['user_id', 'conversation_id', 'score', 'submitted_at'])]
+#[Fillable(['user_id', 'conversation_id', 'score'])]
 class Quiz extends Model
 {
-	protected $casts = [
-		'submitted_at' => 'datetime'
-	];
-
 	public function user()
 	{
 		return $this->belongsTo(User::class);
