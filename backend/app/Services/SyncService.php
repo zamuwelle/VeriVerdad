@@ -60,12 +60,6 @@ class SyncService
 				}
 			}
 
-			foreach ($sqliteUsers as $id => $user) {
-				if (!isset($pgUsers[$id])) {
-					DB::connection('sqlite')->table('users')->where('id', $id)->delete();
-				}
-			}
-
 			$pgConvs = $this->pg('conversations')->get()->keyBy('id');
 			$sqliteConvs = DB::connection('sqlite')->table('conversations')->get()->keyBy('id');
 
@@ -75,25 +69,12 @@ class SyncService
 				}
 			}
 
-			foreach ($sqliteConvs as $id => $conv) {
-				if (!isset($pgConvs[$id])) {
-					DB::connection('sqlite')->table('conversations')->where('id', $id)->delete();
-					DB::connection('sqlite')->table('messages')->where('conversation_id', $id)->delete();
-				}
-			}
-
 			$pgMsgs = $this->pg('messages')->get()->keyBy('id');
 			$sqliteMsgs = DB::connection('sqlite')->table('messages')->get()->keyBy('id');
 
 			foreach ($pgMsgs as $id => $msg) {
 				if (!isset($sqliteMsgs[$id]) || $sqliteMsgs[$id]->updated_at != $msg->updated_at) {
 					DB::connection('sqlite')->table('messages')->updateOrInsert(['id' => $id], (array) $msg);
-				}
-			}
-
-			foreach ($sqliteMsgs as $id => $msg) {
-				if (!isset($pgMsgs[$id])) {
-					DB::connection('sqlite')->table('messages')->where('id', $id)->delete();
 				}
 			}
 		} catch (\Throwable $e) {
