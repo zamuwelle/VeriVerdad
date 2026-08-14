@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\Quiz;
 use App\Models\User;
 use App\Services\SyncService;
 
@@ -179,13 +180,24 @@ PROMPT;
 			$this->sync->syncMessage($userMessage);
 		}
 
-		$assistantMessage = Message::create(['conversation_id' => $conversation->id, 'role' => 'assistant', 'content' => $reply, 'reasoning' => $reasoning]);
+	$assistantMessage = Message::create(['conversation_id' => $conversation->id, 'role' => 'assistant', 'content' => $reply, 'reasoning' => $reasoning]);
 
-		$this->sync->syncUser(User::find($userId));
-		$this->sync->syncConversation($conversation);
-		$this->sync->syncMessage($assistantMessage);
+	$this->sync->syncUser(User::find($userId));
+	$this->sync->syncConversation($conversation);
+	$this->sync->syncMessage($assistantMessage);
 
-		return [
+	if (preg_match('/Score:\s*(\d+)\s*\/\s*3/', $reply, $m)) {
+		$quiz = Quiz::create([
+			'user_id' => $userId,
+			'conversation_id' => $conversation->id,
+			'score' => (int) $m[1],
+			'submitted_at' => now()
+		]);
+
+		$this->sync->syncQuiz($quiz);
+	}
+
+	return [
 			'conversation' => $conversation,
 			'reply' => $reply,
 			'reasoning' => $reasoning,
