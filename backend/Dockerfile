@@ -2,7 +2,7 @@ FROM dunglas/frankenphp
 
 RUN install-php-extensions \
 	pcntl \
-	pdo_mysql \
+	pdo_pgsql \
 	mbstring \
 	exif \
 	bcmath \
