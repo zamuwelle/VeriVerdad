@@ -75,6 +75,12 @@ export const Thinking = ({ reasoning, thinkTime, isThinkingActive = false }) => 
 	)
 }
 
+const STARTER_PROMPTS = [
+	'Does drinking warm water cure cancer?',
+	'Did DOH announce a nationwide dengue lockdown?',
+	'How do I spot an AI-manipulated photo online?'
+]
+
 export const Component = () => {
 	const { conversationId: routeId } = useParams()
 	const navigate = useNavigate()
@@ -85,8 +91,10 @@ export const Component = () => {
 	const [editText, setEditText] = useState('')
 	const [quizData, setQuizData] = useState(null)
 	const [quizAnswers, setQuizAnswers] = useState({})
+	const [quizIndex, setQuizIndex] = useState(0)
 	const [lastAssistantId, setLastAssistantId] = useState(null)
 	const [conversationId, setConversationId] = useState(routeId || null)
+	const [isLoading, setIsLoading] = useState(!!routeId)
 	const scrollContainerRef = useRef(null)
 	const textareaRef = useRef(null)
 	const requestStartTimeRef = useRef(null)
@@ -98,32 +106,47 @@ export const Component = () => {
 	useEffect(() => {
 		if (routeId) {
 			setConversationId(routeId)
+			setIsLoading(true)
 			getConversation(routeId).then(res => {
-				const list = res?.messages || res?.data?.messages || (Array.isArray(res?.data) ? res.data : [])
+				const rawList = res?.messages || res?.data?.messages || (Array.isArray(res?.data) ? res.data : [])
+				const isSynthetic = m => m.role === 'user' && (
+					m.content === 'Verify this claim with real sources and evidence.' ||
+					m.content === 'Give me the quiz on this.' ||
+					m.content === 'Test my instincts on this with a quick quiz question.' ||
+					(m.content?.startsWith('Q1:') && m.content?.includes('| Q2:'))
+				)
+				const list = rawList.filter(m => !isSynthetic(m))
 				let lastAssistant = null
+				const lastAssistantIdx = list.map(x => x.role).lastIndexOf('assistant')
 				const mapped = list.map((m, i) => {
 					const prev = list[i - 1]
 					const diff = prev?.created_at && m.created_at ? Math.max(1, Math.round((new Date(m.created_at) - new Date(prev.created_at)) / 1000)) : 1
+					const isLast = i === lastAssistantIdx
+					const hasOfferQuiz = isLast && hasToken(m.content || '', 'OFFER_QUIZ')
+					const hasVerify = isLast && hasToken(m.content || '', 'VERIFY') && !hasOfferQuiz
 					m.role === 'assistant' && (lastAssistant = m.id)
 					return {
 						...m,
 						timestamp: getTime(m.created_at),
 						thinkTime: `${diff} second${diff === 1 ? '' : 's'}`,
-						hasVerify: false,
-						hasOfferQuiz: false,
+						hasVerify,
+						hasOfferQuiz,
 						content: stripTokens(m.content)
 					}
 				})
 				setMessages(mapped)
 				setLastAssistantId(lastAssistant)
+				setIsLoading(false)
 				setTimeout(() => textareaRef.current?.focus(), 50)
-			})
+			}).catch(() => setIsLoading(false))
 		} else {
 			setConversationId(null)
 			setMessages([])
 			setQuizData(null)
 			setQuizAnswers({})
+			setQuizIndex(0)
 			setLastAssistantId(null)
+			setIsLoading(false)
 			setTimeout(() => textareaRef.current?.focus(), 50)
 		}
 	}, [routeId])
@@ -159,6 +182,7 @@ export const Component = () => {
 			if (quiz) {
 				setQuizData(quiz)
 				setQuizAnswers({})
+				setQuizIndex(0)
 			} else {
 				setQuizData(null)
 			}
@@ -180,9 +204,16 @@ export const Component = () => {
 		chatMutation.mutate({ message: text, id: conversationId, verify })
 	}
 
-	const submitQuiz = () => {
-		const answers = quizData.map((_, i) => `Q${i + 1}: ${quizAnswers[i]}`).join(' | ')
-		sendPrompt(answers, false, false)
+	const pickQuizOption = opt => {
+		const next = { ...quizAnswers, [quizIndex]: opt }
+		setQuizAnswers(next)
+		if (quizIndex < quizData.length - 1) {
+			setQuizIndex(quizIndex + 1)
+		} else {
+			const payload = quizData.map((_, i) => `Q${i + 1}: ${i === quizIndex ? opt : next[i]}`).join(' | ')
+			setQuizData(null)
+			sendPrompt(payload, false, true)
+		}
 	}
 
 	const saveEditing = id => editText.trim() && sendPrompt(editText.trim())
@@ -224,11 +255,23 @@ export const Component = () => {
 
 			<main className="flex-1 flex flex-col h-full overflow-hidden relative">
 				<div ref={scrollContainerRef} className="flex-1 w-full overflow-y-auto">
-					{!messages.length ? (
+					{isLoading ? null : !messages.length ? (
 						<div className="flex flex-col items-center justify-center min-h-full p-4 md:p-8 max-w-3xl mx-auto w-full">
 							<img src="/mascot.png" alt="" className="w-24 h-24 sm:w-28 sm:h-28 object-contain mb-4 select-none" />
 							<h2 className="text-2xl md:text-3xl font-bold text-[var(--color-text)] tracking-tight mb-8 text-center">How can Veribot help you today?</h2>
 							{renderInputCard("Ask Veribot to check a claim...")}
+							<div className="flex flex-wrap items-center justify-center gap-2 mt-4 max-w-2xl">
+								{STARTER_PROMPTS.map((prompt, i) => (
+									<button
+										key={i}
+										type="button"
+										onClick={() => sendPrompt(prompt)}
+										className="px-3 py-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-primary)] hover:opacity-90 transition-all cursor-pointer"
+									>
+										{prompt}
+									</button>
+								))}
+							</div>
 						</div>
 					) : (
 						<div className="p-4 md:p-6 space-y-6 max-w-3xl mx-auto w-full">
@@ -256,7 +299,7 @@ export const Component = () => {
 															</div>
 														)}
 
-														{msg.role === 'assistant' && isLastAssistant && msg.hasOfferQuiz && (
+														{msg.role === 'assistant' && isLastAssistant && msg.hasOfferQuiz && !quizData && (
 															<div className="pt-1.5">
 																<button type="button" disabled={chatMutation.isPending} onClick={() => sendPrompt('Give me the quiz on this.', false, true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium text-[var(--color-text)] cursor-pointer">
 																	<GameControllerIcon style={{ width: '14px', height: '14px' }} />
@@ -297,33 +340,46 @@ export const Component = () => {
 				</div>
 
 				<div className="p-4 shrink-0 bg-[var(--color-bg)] max-w-3xl w-full mx-auto space-y-3">
-					{quizData && (
-						<div className="space-y-3">
-							{quizData.map((q, qi) => (
-								<div key={qi} className="bg-[var(--color-surface)] rounded-xl p-3.5 border border-[var(--color-border)] space-y-2">
-									<p className="text-xs text-[var(--color-text)] leading-relaxed">{q.scenario}</p>
-									<div className="flex flex-col gap-1.5">
-										{q.choices.map((opt, oi) => {
-											const isPicked = quizAnswers[qi] === opt
-											return (
-												<button
-													type="button"
-													key={oi}
-													onClick={() => setQuizAnswers(prev => ({ ...prev, [qi]: opt }))}
-													className={`w-full p-2.5 rounded-lg border text-left text-xs transition-all cursor-pointer font-medium leading-relaxed ${isPicked ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-bg)] text-[var(--color-text)] border-[var(--color-border)] hover:border-[var(--color-primary)] hover:opacity-80'}`}
-												>
-													{opt}
-												</button>
-											)
-										})}
+					{quizData && quizData[quizIndex] && (
+						<div className="bg-[var(--color-surface)] rounded-2xl p-4 border border-[var(--color-border)] space-y-3">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-2">
+									<span className="text-xs font-semibold text-[var(--color-primary)]">Question {quizIndex + 1} of {quizData.length}</span>
+									<div className="flex gap-1">
+										{quizData.map((_, i) => (
+											<span key={i} className={`w-1.5 h-1.5 rounded-full ${i === quizIndex ? 'bg-[var(--color-primary)]' : quizAnswers[i] ? 'bg-[var(--color-primary)]/40' : 'bg-[var(--color-border)]'}`} />
+										))}
 									</div>
 								</div>
-							))}
-							{Object.keys(quizAnswers).length === quizData.length && (
-								<button type="button" onClick={submitQuiz} disabled={chatMutation.isPending} className="w-full py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-80 disabled:opacity-50 cursor-pointer">
-									Submit Answers
-								</button>
-							)}
+								<div className="flex items-center gap-2">
+									{quizIndex > 0 && (
+										<button type="button" onClick={() => setQuizIndex(quizIndex - 1)} className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] cursor-pointer">
+											Previous
+										</button>
+									)}
+									<button type="button" onClick={() => setQuizData(null)} className="text-xs text-[var(--color-text-faint)] hover:text-[var(--color-text)] cursor-pointer">
+										Dismiss
+									</button>
+								</div>
+							</div>
+
+							<p className="text-xs font-medium text-[var(--color-text)] leading-relaxed">{quizData[quizIndex].scenario}</p>
+
+							<div className="flex flex-col gap-1.5">
+								{quizData[quizIndex].choices.map((opt, oi) => {
+									const isPicked = quizAnswers[quizIndex] === opt
+									return (
+										<button
+											type="button"
+											key={oi}
+											onClick={() => pickQuizOption(opt)}
+											className={`w-full p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer font-medium leading-relaxed ${isPicked ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-bg)] text-[var(--color-text)] border-[var(--color-border)] hover:border-[var(--color-primary)] hover:opacity-80'}`}
+										>
+											{opt}
+										</button>
+									)
+								})}
+							</div>
 						</div>
 					)}
 
