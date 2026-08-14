@@ -12,7 +12,7 @@ return new class extends Migration
 			$table->foreignId('user_id')->constrained()->cascadeOnDelete();
 			$table->foreignUuid('conversation_id')->nullable()->constrained()->nullOnDelete();
 			$table->integer('score');
-			$table->timestamp('submitted_at');
+			$table->timestamps();
 		});
 	}
 
