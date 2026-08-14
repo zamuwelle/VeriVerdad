@@ -48,7 +48,7 @@ export const Sidebar = () => {
 			<header className="lg:hidden flex items-center justify-between p-4 bg-[var(--color-primary)] text-white border-b border-[var(--color-border)]">
 				<div className="flex items-center gap-3">
 					<img src="/logo.png" alt="" className="h-7 w-auto object-contain" />
-					<span className="text-sm font-bold tracking-wider">VERIVERDAD</span>
+					<span className="text-lg font-bold leading-[0.8] tracking-[-0.07em] text-[var(--color-surface)] whitespace-nowrap">VERIVERDAD</span>
 				</div>
 				<button type="button" onClick={() => setOpen(!open)} aria-label="Toggle menu" className="p-1 text-white hover:opacity-80 cursor-pointer">
 					<svg className="w-6 h-6 stroke-current fill-none" viewBox="0 0 24 24">
@@ -61,7 +61,7 @@ export const Sidebar = () => {
 				<div className="flex flex-col gap-6 p-6 flex-1 overflow-hidden">
 					<div className="hidden lg:flex items-center gap-3 shrink-0">
 						<img src="/logo.png" alt="" className="h-8 w-auto object-contain" />
-						<span className="text-sm font-bold tracking-wider text-[var(--color-primary)]">VERIVERDAD</span>
+						<span className="text-lg font-bold leading-[0.8] tracking-[-0.07em] text-[var(--color-primary)] whitespace-nowrap">VERIVERDAD</span>
 					</div>
 
 					<nav className="flex flex-col gap-1 overflow-hidden">
