@@ -9,41 +9,35 @@ use Illuminate\Support\Facades\Http;
 class GroqService
 {
 	protected static $cooldowns = [];
-
 	public function chat($messages, $tools = null, $model = null)
 	{
 		$keys = Config::get('groq.keys');
 		$model = $model ?? Config::get('groq.model');
-
 		foreach ($keys as $index => $key) {
 			if (isset(self::$cooldowns[$index]) && self::$cooldowns[$index] > now()) {
 				continue;
 			}
-
 			try {
 				$payload = [
 					'model' => $model,
 					'messages' => $messages,
 					'max_completion_tokens' => 1024,
-					'temperature' => 0.7,
+					'temperature' => 0.4,
 					'include_reasoning' => true,
 					'reasoning_effort' => 'medium',
 				];
-
 				if ($tools) $payload['tools'] = $tools;
-
 				$response = Http::withToken($key)
 					->timeout(60)
 					->post('https://api.groq.com/openai/v1/chat/completions', $payload);
-
 				if ($response->successful()) {
 					$data = $response->json();
 					$choice = $data['choices'][0] ?? [];
 					$message = $choice['message'] ?? [];
 					$usage = $data['usage'] ?? [];
-
+					$reply = preg_replace('/\x{3010}[^\x{3011}]*\x{3011}/u', '', $message['content'] ?? '');
 					return [
-						'reply' => $message['content'] ?? '',
+						'reply' => $reply,
 						'reasoning' => $message['reasoning'] ?? null,
 						'model' => $data['model'] ?? $model,
 						'usage' => [
@@ -54,19 +48,16 @@ class GroqService
 						],
 					];
 				}
-
 				if ($response->status() === 429) {
 					$retryAfter = $response->header('Retry-After');
 					$cooldownSeconds = is_numeric($retryAfter) ? (int) $retryAfter : 60;
 					self::$cooldowns[$index] = now()->addSeconds($cooldownSeconds);
 					continue;
 				}
-
 				if ($response->status() === 401) {
 					self::$cooldowns[$index] = now()->addYear();
 					continue;
 				}
-
 				if ($response->serverError()) {
 					throw new \RuntimeException('Groq service unavailable.');
 				}
@@ -74,7 +65,6 @@ class GroqService
 				continue;
 			}
 		}
-
 		throw new \RuntimeException('All Groq keys rate-limited. Try again shortly.');
 	}
 }
