@@ -3,39 +3,51 @@
 namespace App\Services;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 
 class GroqService
 {
-	protected static $cooldowns = [];
 	public function chat($messages, $tools = null, $model = null)
 	{
-		$keys = Config::get('groq.keys');
-		$model = $model ?? Config::get('groq.model');
-		foreach ($keys as $index => $key) {
-			if (isset(self::$cooldowns[$index]) && self::$cooldowns[$index] > now()) {
-				continue;
-			}
+		$keys = array_values(array_filter(Config::get('groq.keys', [])));
+		if (empty($keys)) throw new \RuntimeException('No Groq API keys configured.');
+
+		$model = $model ?? Config::get('groq.model', 'openai/gpt-oss-20b');
+		$count = count($keys);
+		$startIndex = Cache::increment('groq_key_offset') % $count;
+
+		for ($i = 0; $i < $count; $i++) {
+			$index = ($startIndex + $i) % $count;
+			$key = $keys[$index];
+
+			if (Cache::has("groq_cd_$index")) continue;
+
 			try {
 				$payload = [
 					'model' => $model,
 					'messages' => $messages,
 					'max_completion_tokens' => 1024,
 					'temperature' => 0.4,
-					'include_reasoning' => true,
-					'reasoning_effort' => 'medium',
 				];
+
+				if (str_starts_with($model, 'openai/') || str_starts_with($model, 'qwen')) {
+					$payload['include_reasoning'] = true;
+					$payload['reasoning_effort'] = 'medium';
+				}
+
 				if ($tools) $payload['tools'] = $tools;
-				$response = Http::withToken($key)
-					->timeout(60)
-					->post('https://api.groq.com/openai/v1/chat/completions', $payload);
+
+				$response = Http::withToken($key)->timeout(60)->post('https://api.groq.com/openai/v1/chat/completions', $payload);
+
 				if ($response->successful()) {
 					$data = $response->json();
 					$choice = $data['choices'][0] ?? [];
 					$message = $choice['message'] ?? [];
 					$usage = $data['usage'] ?? [];
 					$reply = preg_replace('/\x{3010}[^\x{3011}]*\x{3011}/u', '', $message['content'] ?? '');
+
 					return [
 						'reply' => $reply,
 						'reasoning' => $message['reasoning'] ?? null,
@@ -48,23 +60,22 @@ class GroqService
 						],
 					];
 				}
+
 				if ($response->status() === 429) {
-					$retryAfter = $response->header('Retry-After');
-					$cooldownSeconds = is_numeric($retryAfter) ? (int) $retryAfter : 60;
-					self::$cooldowns[$index] = now()->addSeconds($cooldownSeconds);
+					$retryAfter = (int) ($response->header('Retry-After') ?? 60);
+					Cache::put("groq_cd_$index", true, now()->addSeconds(max(5, $retryAfter)));
 					continue;
 				}
+
 				if ($response->status() === 401) {
-					self::$cooldowns[$index] = now()->addYear();
+					Cache::put("groq_cd_$index", true, now()->addYear());
 					continue;
-				}
-				if ($response->serverError()) {
-					throw new \RuntimeException('Groq service unavailable.');
 				}
 			} catch (ConnectionException $e) {
 				continue;
 			}
 		}
+
 		throw new \RuntimeException('All Groq keys rate-limited. Try again shortly.');
 	}
 }
