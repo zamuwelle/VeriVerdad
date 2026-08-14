@@ -29,8 +29,6 @@ class SyncQuizJob implements ShouldQueue
 				'user_id' => $quiz->user_id,
 				'conversation_id' => $quiz->conversation_id,
 				'score' => $quiz->score,
-				'total' => $quiz->total,
-				'submitted_at' => $quiz->submitted_at,
 			]);
 		} catch (\Throwable $e) {
 			file_put_contents(storage_path('logs/sync_errors.log'), date('c') . ' ' . $e->getMessage() . PHP_EOL, FILE_APPEND);
