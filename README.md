@@ -87,6 +87,9 @@ php artisan key:generate
 
 # Configure your database and Groq API key in .env (see Configuration section)
 
+# Create SQLite database file
+touch database/database.sqlite
+
 # Run database migrations on SQLite
 php artisan migrate --force
 
@@ -95,6 +98,8 @@ php artisan serve
 ```
 
 The backend will be available at `http://localhost:8000`.
+
+> **Note:** Make sure to create the SQLite database file with `touch database/database.sqlite` before running migrations.
 
 > **Note:** The queue worker starts automatically in the background when you run `php artisan serve`. No extra terminal needed.
 
