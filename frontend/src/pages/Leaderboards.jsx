@@ -24,19 +24,19 @@ export const Component = () => {
 			<div className="min-h-screen flex flex-col lg:flex-row bg-[var(--color-bg)] text-[var(--color-text)]">
 				<Sidebar />
 				<main className="flex-1 md:px-32 pt-16">
-					<h1 className="text-4xl font-bold text-[var(--color-text)] mb-8 text-center">Leaderboards</h1>
+					<h1 className="text-3xl font-bold text-[var(--color-text)] mb-8 text-center">Leaderboards</h1>
 					<div className="flex flex-col gap-0.5 overflow-y-auto flex-1">
 
 						{loading ? <p className="text-center">Loading...</p> :
 						(!users ? [] : users).length === 0 ? <p className="text-center">No other users yet.</p> :
 						(<>
-							<h2 className='text-3xl font-bold text-[var(--color-text-muted)] mb-8 text-center'>
+							<h2 className='text-2xl font-bold text-[var(--color-text-muted)] mb-8 text-center'>
 								Most Veribot History
 							</h2>
 							{users.map((user, index) => {
 								const rank = index + 1;
 								return (
-									<div className='flex text-2xl p-2 md:px-16 border border-[var(--color-border)]'>
+									<div className='flex p-2 md:px-16 border border-[var(--color-border)]'>
 										<p className={rankColors[rank] + ' font-bold pr-8'}>{rank}.</p>
 
 										<p className='flex-1'>{user.username}</p>
