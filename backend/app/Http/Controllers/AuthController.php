@@ -47,6 +47,9 @@ class AuthController extends Controller
 
 	public function users()
 	{
+		$sync = app(SyncService::class);
+		$sync->syncFromPostgres();
+
 		$users = User::select('id', 'username')
 			->withCount('conversations')
 			->orderByDesc('conversations_count')
