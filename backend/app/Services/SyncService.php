@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Jobs\DeleteConversationJob;
 use App\Jobs\SyncConversationJob;
 use App\Jobs\SyncMessageJob;
+use App\Jobs\SyncQuizJob;
 use App\Jobs\SyncUserJob;
 use Illuminate\Support\Facades\DB;
 
@@ -28,6 +29,11 @@ class SyncService
 	public function syncMessage($message)
 	{
 		SyncMessageJob::dispatch($message->id);
+	}
+
+	public function syncQuiz($quiz)
+	{
+		SyncQuizJob::dispatch($quiz->id);
 	}
 
 	public function deleteConversation($id)
