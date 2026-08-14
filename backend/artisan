@@ -9,6 +9,10 @@ require __DIR__ . '/vendor/autoload.php';
 
 $app = require_once __DIR__ . '/bootstrap/app.php';
 
+if (isset($argv[1]) && $argv[1] === 'serve') {
+	exec('php ' . __DIR__ . '/artisan queue:work --sleep=3 --tries=3 > storage/logs/queue.log 2>&1 &');
+}
+
 $status = $app->handleCommand(new ArgvInput);
 
 exit($status);
