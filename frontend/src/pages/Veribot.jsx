@@ -16,7 +16,7 @@ export const CodeBlock = ({ language, value }) => {
 	const [copied, setCopied] = useState(false)
 	const handleCopy = () => (navigator.clipboard.writeText(value), setCopied(true), setTimeout(() => setCopied(false), 2000))
 	return (
-		<div className="relative my-3 rounded-lg overflow-hidden border border-[var(--color-border)] bg-[var(--color-bg)] text-xs">
+		<div className="relative my-3 overflow-hidden border border-[var(--color-border)] bg-[var(--color-bg)] text-xs">
 			<div className="flex items-center justify-between px-3 py-1.5 bg-[var(--color-surface)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] font-mono">
 				<span>{language || 'text'}</span>
 				<button type="button" onClick={handleCopy} title={copied ? 'Copied!' : 'Copy'} className="hover:opacity-80 text-[var(--color-text)] cursor-pointer">
@@ -34,7 +34,7 @@ export const Thinking = ({ reasoning, thinkTime, isThinkingActive = false }) => 
 	const [isOpen, setIsOpen] = useState(false)
 	return (
 		<div className="my-2 select-none">
-			<button type="button" onClick={() => setIsOpen(!isOpen)} className="group flex items-center gap-2 py-1.5 px-2.5 rounded-lg hover:opacity-80 text-[var(--color-text-muted)] text-xs cursor-pointer">
+			<button type="button" onClick={() => setIsOpen(!isOpen)} className="group flex items-center gap-2 py-1.5 px-2.5 hover:opacity-80 text-[var(--color-text-muted)] text-xs cursor-pointer">
 				<img src="/logo.png" alt="" className="h-4 w-auto object-contain" />
 				<span className="font-medium">{isThinkingActive ? 'Thinking...' : `Thought for ${thinkTime || '2 seconds'}`}</span>
 				<span className="opacity-0 group-hover:opacity-100">
@@ -153,10 +153,10 @@ export const Component = () => {
 	const saveEditing = id => editText.trim() && sendPrompt(editText.trim())
 
 	const renderInputCard = placeholderText => (
-		<div className="w-full bg-[var(--color-surface)] rounded-2xl p-3.5 space-y-3 border border-[var(--color-border)]">
+		<div className="w-full bg-[var(--color-surface)] p-3.5 space-y-3 border border-[var(--color-border)]">
 			<textarea ref={textareaRef} value={input} onChange={e => (setInput(e.target.value), textareaRef.current && (textareaRef.current.style.height = 'auto', textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`))} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendPrompt())} placeholder={placeholderText} rows={2} className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-sm p-1 pr-2 text-[var(--color-text)] placeholder-[var(--color-text-faint)] resize-none min-h-[44px] max-h-[200px]" />
 			<div className="flex items-center justify-end">
-				<button type="button" onClick={() => sendPrompt()} disabled={!input.trim() || chatMutation.isPending} className="p-1.5 bg-[var(--color-primary)] hover:opacity-80 text-white rounded-lg disabled:opacity-20 cursor-pointer">
+				<button type="button" onClick={() => sendPrompt()} disabled={!input.trim() || chatMutation.isPending} className="p-1.5 bg-[var(--color-primary)] hover:opacity-80 text-white disabled:opacity-20 cursor-pointer">
 					<UpArrowIcon className="w-4 h-4" />
 				</button>
 			</div>
@@ -182,7 +182,7 @@ export const Component = () => {
 								return (
 									<div key={msg.id} className="group flex flex-col space-y-1">
 										<div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-											<div onDoubleClick={() => msg.role === 'user' && (setEditingId(msg.id), setEditText(msg.content))} className={`max-w-[88%] rounded-lg px-4 py-2.5 text-sm text-[var(--color-text)] ${editingId === msg.id ? 'border border-[var(--color-border)]' : msg.role === 'user' ? 'bg-[var(--color-surface)] cursor-pointer' : ''}`}>
+											<div onDoubleClick={() => msg.role === 'user' && (setEditingId(msg.id), setEditText(msg.content))} className={`max-w-[88%] px-4 py-2.5 text-sm text-[var(--color-text)] ${editingId === msg.id ? 'border border-[var(--color-border)]' : msg.role === 'user' ? 'bg-[var(--color-surface)] cursor-pointer' : ''}`}>
 												{editingId === msg.id ? (
 													<textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), saveEditing(msg.id))} rows={1} style={{ fieldSizing: 'content' }} className="w-full min-w-[280px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-0 text-sm text-[var(--color-text)] resize-none" />
 												) : (
@@ -203,7 +203,7 @@ export const Component = () => {
 																	return match ? (
 																		<CodeBlock language={match[1]} value={String(children).replace(/\n$/, '')} />
 																	) : (
-																		<code {...props} className="bg-[var(--color-bg)] text-[var(--color-primary)] px-1 py-0.5 rounded text-xs border border-[var(--color-border)]">
+																		<code {...props} className="bg-[var(--color-bg)] text-[var(--color-primary)] px-1 py-0.5 text-xs border border-[var(--color-border)]">
 																			{children}
 																		</code>
 																	)
@@ -215,7 +215,7 @@ export const Component = () => {
 
 														{msg.role === 'assistant' && isLastAssistant && msg.hasVerify && (
 															<div className="pt-1.5">
-																<button type="button" disabled={chatMutation.isPending} onClick={() => sendPrompt('Verify this claim with real sources and evidence.', true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium text-[var(--color-text)] cursor-pointer">
+																<button type="button" disabled={chatMutation.isPending} onClick={() => sendPrompt('Verify this claim with real sources and evidence.', true)} className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium text-[var(--color-text)] cursor-pointer">
 																	<SearchIcon style={{ width: '14px', height: '14px' }} />
 																	<span>Verify this claim with web sources</span>
 																</button>
@@ -224,7 +224,7 @@ export const Component = () => {
 
 														{msg.role === 'assistant' && isLastAssistant && msg.hasOfferQuiz && (
 															<div className="pt-1.5">
-																<button type="button" disabled={chatMutation.isPending} onClick={() => sendPrompt('Test my instincts on this with a quick quiz question.', false, true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium text-[var(--color-text)] cursor-pointer">
+																<button type="button" disabled={chatMutation.isPending} onClick={() => sendPrompt('Test my instincts on this with a quick quiz question.', false, true)} className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg)] border border-[var(--color-border)] hover:opacity-80 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium text-[var(--color-text)] cursor-pointer">
 																	<GameControllerIcon style={{ width: '14px', height: '14px' }} />
 																	<span>Test your instincts (Quiz)</span>
 																</button>
@@ -235,15 +235,15 @@ export const Component = () => {
 											</div>
 											{editingId === msg.id && (
 												<div className="flex justify-end gap-2 text-xs mt-1">
-													<button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 rounded text-[var(--color-text)] hover:opacity-80 cursor-pointer">Cancel</button>
-													<button type="button" onClick={() => saveEditing(msg.id)} disabled={!editText.trim()} className="px-3 py-1.5 rounded bg-[var(--color-primary)] text-white font-medium hover:opacity-80 disabled:opacity-50 cursor-pointer">Save</button>
+													<button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 text-[var(--color-text)] hover:opacity-80 cursor-pointer">Cancel</button>
+													<button type="button" onClick={() => saveEditing(msg.id)} disabled={!editText.trim()} className="px-3 py-1.5 bg-[var(--color-primary)] text-white font-medium hover:opacity-80 disabled:opacity-50 cursor-pointer">Save</button>
 												</div>
 											)}
 											{editingId !== msg.id && (
 												<div className="flex items-center gap-1 mt-1 px-1 text-[var(--color-text-faint)] opacity-0 group-hover:opacity-100">
 													{msg.timestamp && <span className="text-xs pr-1.5">{msg.timestamp}</span>}
-													{msg.role === 'user' && <button type="button" onClick={() => (setEditingId(msg.id), setEditText(msg.content))} className="p-1.5 rounded hover:opacity-80 flex items-center justify-center cursor-pointer" style={{ width: '28px', height: '28px' }}><EditIcon style={{ width: '1em', height: '1em', fontSize: '16px' }} /></button>}
-													<button type="button" onClick={() => navigator.clipboard.writeText(msg.content)} className="p-1.5 rounded hover:opacity-80 flex items-center justify-center cursor-pointer" style={{ width: '28px', height: '28px' }}><CopyIcon style={{ width: '1em', height: '1em', fontSize: '16px' }} /></button>
+													{msg.role === 'user' && <button type="button" onClick={() => (setEditingId(msg.id), setEditText(msg.content))} className="p-1.5 hover:opacity-80 flex items-center justify-center cursor-pointer" style={{ width: '28px', height: '28px' }}><EditIcon style={{ width: '1em', height: '1em', fontSize: '16px' }} /></button>}
+													<button type="button" onClick={() => navigator.clipboard.writeText(msg.content)} className="p-1.5 hover:opacity-80 flex items-center justify-center cursor-pointer" style={{ width: '28px', height: '28px' }}><CopyIcon style={{ width: '1em', height: '1em', fontSize: '16px' }} /></button>
 												</div>
 											)}
 										</div>
@@ -253,7 +253,7 @@ export const Component = () => {
 
 							{chatMutation.isPending && !lockedChoice && (
 								<div className="flex flex-col items-start max-w-[88%]">
-									<div className="p-3 rounded-xl w-full">
+									<div className="p-3 w-full">
 										<Thinking isThinkingActive={true} />
 									</div>
 								</div>
@@ -264,7 +264,7 @@ export const Component = () => {
 
 				<div className="p-4 shrink-0 bg-[var(--color-bg)] max-w-3xl w-full mx-auto space-y-3">
 					{interactiveChoice && (
-						<div className="bg-[var(--color-surface)] rounded-xl p-3.5 space-y-2 border border-[var(--color-border)]">
+						<div className="bg-[var(--color-surface)] p-3.5 space-y-2 border border-[var(--color-border)]">
 							<div className="flex items-center justify-between px-0.5">
 								<span className="text-xs font-semibold text-[var(--color-text)]">{lockedChoice ? 'Checking your answer...' : interactiveChoice.title}</span>
 								{!lockedChoice && <button type="button" onClick={() => setInteractiveChoice(null)} className="text-[11px] text-[var(--color-text-faint)] hover:opacity-80 cursor-pointer">Dismiss</button>}
@@ -279,9 +279,9 @@ export const Component = () => {
 											key={idx}
 											onClick={() => !isDisabled && pickChoice(opt)}
 											disabled={isDisabled}
-											className={`flex items-center gap-2.5 p-2 rounded-lg border text-left text-xs cursor-pointer ${isPicked ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : isDisabled ? 'bg-[var(--color-bg)] border-[var(--color-border)] text-[var(--color-text-faint)] opacity-40 cursor-not-allowed' : 'bg-[var(--color-bg)] border-[var(--color-border)] text-[var(--color-text)] hover:opacity-80'}`}
+											className={`flex items-center gap-2.5 p-2 border text-left text-xs cursor-pointer ${isPicked ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : isDisabled ? 'bg-[var(--color-bg)] border-[var(--color-border)] text-[var(--color-text-faint)] opacity-40 cursor-not-allowed' : 'bg-[var(--color-bg)] border-[var(--color-border)] text-[var(--color-text)] hover:opacity-80'}`}
 										>
-											<span className={`w-5 h-5 rounded flex items-center justify-center text-[11px] shrink-0 border ${isPicked ? 'bg-white/20 border-white/30 text-white' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>{idx + 1}</span>
+											<span className={`w-5 h-5 flex items-center justify-center text-[11px] shrink-0 border ${isPicked ? 'bg-white/20 border-white/30 text-white' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>{idx + 1}</span>
 											<span className="flex-1 font-medium">{opt}</span>
 										</button>
 									)
@@ -291,7 +291,7 @@ export const Component = () => {
 					)}
 
 					{chatMutation.error?.response?.data?.message && (
-						<div className="text-center text-xs text-[var(--color-text-muted)] bg-[var(--color-border)] rounded-lg py-2 px-3">
+						<div className="text-center text-xs text-[var(--color-text-muted)] bg-[var(--color-border)] py-2 px-3">
 							{chatMutation.error.response.data.message}
 						</div>
 					)}

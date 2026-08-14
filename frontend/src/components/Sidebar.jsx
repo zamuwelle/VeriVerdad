@@ -69,7 +69,7 @@ export const Sidebar = () => {
 							const isActive = location.pathname === item.path
 							return (
 								<div key={item.path} className="flex flex-col gap-1">
-									<Link to={item.path} onClick={() => setOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold no-underline hover:opacity-80 ${isActive ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text-muted)] bg-transparent'}`}>
+									<Link to={item.path} onClick={() => setOpen(false)} className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold no-underline hover:opacity-80 ${isActive ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text-muted)] bg-transparent'}`}>
 										<item.Icon className="w-5 h-5 shrink-0" />
 										<span>{item.label}</span>
 									</Link>
@@ -94,9 +94,9 @@ export const Sidebar = () => {
 									const isChatActive = location.pathname === `/veribot/${chat.id}`
 									const chatTitle = toTitleCase(chat.title || chat.first_message || 'Untitled Chat')
 									return (
-										<div key={chat.id} className={`group flex items-center justify-between rounded-full px-3.5 py-2 text-xs hover:opacity-80 ${isChatActive ? 'bg-[var(--color-bg)] text-[var(--color-text)] font-semibold' : 'text-[var(--color-text)] bg-transparent font-normal'}`}>
+										<div key={chat.id} className={`group flex items-center justify-between px-3.5 py-2 text-xs hover:opacity-80 ${isChatActive ? 'bg-[var(--color-bg)] text-[var(--color-text)] font-semibold' : 'text-[var(--color-text)] bg-transparent font-normal'}`}>
 											{editingId === chat.id ? (
-												<input type="text" autoFocus value={editTitle} onChange={e => setEditTitle(e.target.value)} onBlur={() => saveRename(chat.id)} onKeyDown={e => e.key === 'Enter' && saveRename(chat.id)} className="bg-transparent border border-[var(--color-border)] rounded px-1.5 py-0.5 text-xs text-[var(--color-text)] outline-none flex-1 w-full" />
+												<input type="text" autoFocus value={editTitle} onChange={e => setEditTitle(e.target.value)} onBlur={() => saveRename(chat.id)} onKeyDown={e => e.key === 'Enter' && saveRename(chat.id)} className="bg-transparent border border-[var(--color-border)] px-1.5 py-0.5 text-xs text-[var(--color-text)] outline-none flex-1 w-full" />
 											) : (
 												<Link to={`/veribot/${chat.id}`} onDoubleClick={() => (setEditingId(chat.id), setEditTitle(chatTitle))} onClick={() => setOpen(false)} className="truncate flex-1 no-underline text-inherit select-none">
 													{chatTitle}
@@ -114,7 +114,7 @@ export const Sidebar = () => {
 				</div>
 
 				<div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-bg)] shrink-0">
-					<button type="button" onClick={() => setShowLogoutModal(true)} className="flex items-center justify-center gap-2 w-full py-2.5 text-xs font-bold text-[var(--color-primary)] border border-[var(--color-border)] bg-[var(--color-surface)] rounded-lg hover:opacity-80 cursor-pointer">
+					<button type="button" onClick={() => setShowLogoutModal(true)} className="flex items-center justify-center gap-2 w-full py-2.5 text-xs font-bold text-[var(--color-primary)] border border-[var(--color-border)] bg-[var(--color-surface)] hover:opacity-80 cursor-pointer">
 						<LogoutIcon className="w-4 h-4 shrink-0" />
 						<span>Sign Out</span>
 					</button>

@@ -76,7 +76,7 @@ const navItems = [
 	{ href: '#faq', label: 'FAQ' }
 ]
 
-const baseButton = 'inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-[var(--color-surface)] bg-[var(--color-primary)] rounded-[var(--radius-md)] no-underline hover:opacity-80'
+const baseButton = 'inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-[var(--color-surface)] bg-[var(--color-primary)] no-underline hover:opacity-80'
 
 export const Component = () => {
 	useTitle('VeriVerdad — Stop Scrolling Past Fake News. Start Spotting It.')
@@ -128,7 +128,7 @@ export const Component = () => {
 							</div>
 						</div>
 						<div className="flex-1 flex justify-center w-full max-w-[320px]">
-							<div className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 sm:p-6 flex flex-col items-center text-center">
+							<div className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] p-4 sm:p-6 flex flex-col items-center text-center">
 								<img src="/mascot.png" alt="" className="w-28 h-28 sm:w-40 sm:h-40 object-contain" />
 								<div className="mt-2">
 									<h3 className="text-base font-bold text-[var(--color-text)]">Veribot</h3>
@@ -146,7 +146,7 @@ export const Component = () => {
 							<p className="text-xs sm:text-sm text-[var(--color-text-muted)] mt-2">See how your scroll habits change when you start looking for receipts instead of taking headlines at face value.</p>
 						</div>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
-							<div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-4 sm:p-6 flex flex-col gap-4">
+							<div className="bg-[var(--color-bg)] border border-[var(--color-border)] p-4 sm:p-6 flex flex-col gap-4">
 								<div className="flex items-center gap-2">
 									<span className="w-2.5 h-2.5 rounded-full bg-[var(--color-text-muted)] inline-block"></span>
 									<h3 className="text-base font-bold text-[var(--color-text)]">Before VeriVerdad</h3>
@@ -160,7 +160,7 @@ export const Component = () => {
 									))}
 								</ul>
 							</div>
-							<div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-4 sm:p-6 flex flex-col gap-4">
+							<div className="bg-[var(--color-bg)] border border-[var(--color-border)] p-4 sm:p-6 flex flex-col gap-4">
 								<div className="flex items-center gap-2">
 									<span className="w-2.5 h-2.5 rounded-full bg-[var(--color-primary)] inline-block"></span>
 									<h3 className="text-base font-bold text-[var(--color-text)]">With VeriVerdad</h3>
@@ -183,7 +183,7 @@ export const Component = () => {
 						<h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text)] text-center max-w-[600px]">Built for the Next Generation of Truth-Seekers</h2>
 						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 w-full">
 							{featureList.map((feature, idx) => (
-								<article key={idx} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-6 flex flex-col gap-2">
+								<article key={idx} className="bg-[var(--color-surface)] border border-[var(--color-border)] p-4 sm:p-6 flex flex-col gap-2">
 									<h3 className="text-sm font-bold text-[var(--color-text)]">{feature.title}</h3>
 									<p className="text-xs sm:text-sm text-[var(--color-text-muted)]">{feature.description}</p>
 								</article>
@@ -195,7 +195,7 @@ export const Component = () => {
 				<section className="py-8 sm:py-16 px-4 sm:px-8 bg-[var(--color-surface)] flex justify-center" id="framework">
 					<div className="max-w-[720px] w-full flex flex-col items-center gap-6">
 						<h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text)] text-center">The 5 Checks for Every Source (CRAAP)</h2>
-						<div className="flex flex-col gap-0 w-full border border-[var(--color-border)] rounded-[var(--radius-md)] overflow-hidden bg-[var(--color-bg)]">
+						<div className="flex flex-col gap-0 w-full border border-[var(--color-border)] overflow-hidden bg-[var(--color-bg)]">
 							{pillars.map((pillar, idx) => (
 								<div key={idx} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4 py-3 px-4 sm:px-6 border-b border-[var(--color-border)] last:border-b-0">
 									<span className="text-xs sm:text-sm font-bold text-[var(--color-text)] sm:w-24 shrink-0">{pillar.name}</span>
@@ -222,7 +222,7 @@ export const Component = () => {
 						<h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text)] text-center">3 Steps to Verify Any Claim</h2>
 						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 w-full">
 							{steps.map((step, idx) => (
-								<div key={idx} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-4 sm:p-6 flex flex-col gap-2">
+								<div key={idx} className="bg-[var(--color-bg)] border border-[var(--color-border)] p-4 sm:p-6 flex flex-col gap-2">
 									<h3 className="text-sm font-bold text-[var(--color-text)]">{step.title}</h3>
 									<p className="text-xs sm:text-sm text-[var(--color-text-muted)]">{step.desc}</p>
 								</div>
@@ -236,7 +236,7 @@ export const Component = () => {
 						<h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text)] text-center">Frequently Asked Questions</h2>
 						<div className="flex flex-col gap-3 w-full">
 							{faqs.map((faq, idx) => (
-								<details key={idx} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-md)] overflow-hidden group">
+								<details key={idx} className="bg-[var(--color-surface)] border border-[var(--color-border)] overflow-hidden group">
 									<summary className="flex justify-between items-center w-full py-3 px-4 sm:px-6 cursor-pointer text-left gap-4 list-none [&::-webkit-details-marker]:hidden">
 										<span className="text-xs sm:text-sm font-semibold text-[var(--color-text)]">{faq.q}</span>
 										<span className="flex items-center justify-center shrink-0 group-open:rotate-180">
