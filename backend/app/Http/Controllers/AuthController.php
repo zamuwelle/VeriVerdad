@@ -5,14 +5,18 @@ namespace App\Http\Controllers;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Models\User;
+use App\Services\SyncService;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-	public function register(RegisterRequest $request)
+	public function register(RegisterRequest $request, SyncService $sync)
 	{
+		$user = User::create($request->validated());
+		$sync->syncUser($user);
+
 		return $this->success([
-			'user' => $user = User::create($request->validated()),
+			'user' => $user,
 			'token' => $user->createToken('auth-token')->plainTextToken
 		]);
 	}
