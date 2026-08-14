@@ -24,9 +24,9 @@
   <a href="https://laravel.com" title="Laravel"><img src="https://img.shields.io/badge/Laravel-%23FF2D20.svg?logo=laravel&logoColor=white" alt="Laravel" /></a>
   <a href="https://react.dev" title="React"><img src="https://img.shields.io/badge/React-%2320232a.svg?logo=react&logoColor=%2361DAFB" alt="React" /></a>
   <a href="https://vitejs.dev" title="Vite"><img src="https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=fff" alt="Vite" /></a>
-  <a href="https://tailwindcss.com" title="Tailwind CSS"><img src="https://img.shields.io/badge/Tailwind%20CSS-%2338B2AC.svg?logo=tailwind-css&logoColor=white" alt="Tailwind CSS" /></a>
-  <a href="https://www.mysql.com" title="MySQL"><img src="https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=fff" alt="MySQL" /></a>
+  <a href="https://tailwindcss.com" title="Tailwind CSS"><img src="https://img.shields.io/badge/Tailwind%20CSS-%2338B2AC.svg?logo=tailwindcss&logoColor=white" alt="Tailwind CSS" /></a>
   <a href="https://www.sqlite.org" title="SQLite"><img src="https://img.shields.io/badge/SQLite-%2307405e.svg?logo=sqlite&logoColor=white" alt="SQLite" /></a>
+  <a href="https://www.postgresql.org" title="PostgreSQL"><img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=fff" alt="PostgreSQL" /></a>
   <a href="https://www.docker.com" title="Docker"><img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=fff" alt="Docker" /></a>
 </p>
 
@@ -45,6 +45,15 @@ The backend is built with **Laravel 13** (powered by **FrankenPHP** for high-per
 
 ---
 
+## Architecture
+
+- **Primary database:** SQLite (`database/database.sqlite`) — all app reads/writes happen here for speed
+- **Backup database:** PostgreSQL (hosted on Aiven) — async backup via queue jobs
+- **Queue worker:** Auto-starts in the background when running `php artisan serve` or in Docker
+- **Auto-recovery:** If SQLite is wiped, the app repopulates from PostgreSQL on next startup
+
+---
+
 ## Installation
 
 ### Prerequisites
@@ -53,7 +62,7 @@ The backend is built with **Laravel 13** (powered by **FrankenPHP** for high-per
 - **Composer** 2.x
 - **Node.js** 18+ and **npm** 9+
 - **Groq API key** ([get one free at console.groq.com](https://console.groq.com))
-- A database (SQLite is used by default; MySQL/MariaDB/PostgreSQL are also supported)
+- **PostgreSQL** (optional, only for backup — the app works without it)
 
 ### 1. Clone the Repository
 
@@ -78,7 +87,7 @@ php artisan key:generate
 
 # Configure your database and Groq API key in .env (see Configuration section)
 
-# Run database migrations
+# Run database migrations on SQLite
 php artisan migrate --force
 
 # Start the development server
@@ -87,7 +96,7 @@ php artisan serve
 
 The backend will be available at `http://localhost:8000`.
 
-> **Tip:** You can also run `composer run dev` from the backend directory to start the server, queue worker, and log watcher concurrently.
+> **Note:** The queue worker starts automatically in the background when you run `php artisan serve`. No extra terminal needed.
 
 ### 3. Frontend Setup
 
@@ -105,15 +114,6 @@ npm run dev
 
 The frontend will be available at `http://localhost:5173`.
 
-### 4. One-Step Setup (Backend Only)
-
-If you want to quickly bootstrap the backend with default settings:
-
-```bash
-cd backend
-composer run setup
-```
-
 ---
 
 ## Configuration
@@ -129,17 +129,17 @@ APP_KEY=base64:<generated-by-artisan>
 APP_DEBUG=true
 APP_URL=http://localhost:8000
 
-# Database (SQLite by default)
+# Database (SQLite is the primary database)
 DB_CONNECTION=sqlite
-DB_DATABASE=/absolute/path/to/backend/database/database.sqlite
+DB_SQLITE_DATABASE=database/database.sqlite
 
-# Or use MySQL
-# DB_CONNECTION=mysql
-# DB_HOST=127.0.0.1
-# DB_PORT=3306
-# DB_DATABASE=verivdad
-# DB_USERNAME=root
-# DB_PASSWORD=
+# PostgreSQL backup (optional — app works without it)
+DB_POSTGRES_HOST=your-postgres-host
+DB_POSTGRES_PORT=5432
+DB_POSTGRES_DATABASE=your_database
+DB_POSTGRES_USERNAME=your_username
+DB_POSTGRES_PASSWORD=your_password
+DB_POSTGRES_SSLMODE=require
 
 # Groq API
 GROQ_API_KEY=gsk_your_groq_api_key_here
@@ -148,11 +148,7 @@ GROQ_API_KEY=gsk_your_groq_api_key_here
 SECRET_TOKEN=your_super_secret_token_here
 ```
 
-To create the SQLite database file:
-
-```bash
-touch backend/database/database.sqlite
-```
+> **Note:** The SQLite database file is already included at `backend/database/database.sqlite`. No need to create it manually.
 
 ### Frontend Environment Variables
 
@@ -206,9 +202,6 @@ npm run preview  # Preview production build locally
 ### Backend Scripts
 
 ```bash
-composer run setup    # Full project setup (install, key generate, migrate, build)
-composer run dev      # Run server, queue, logs, and Vite concurrently
-composer run test     # Run PHPUnit test suite
 php artisan serve     # Start Laravel development server
 php artisan migrate   # Run pending migrations
 php artisan pail      # Stream Laravel logs
@@ -238,7 +231,8 @@ VeriVerdad/
 │   │   │   └── Message.php
 │   │   └── Services/
 │   │       ├── ChatService.php
-│   │       └── GroqService.php
+│   │       ├── GroqService.php
+│   │       └── SyncService.php
 │   ├── config/
 │   │   ├── groq.php
 │   │   ├── secret.php
@@ -297,7 +291,7 @@ Contributions are welcome. Please follow these guidelines:
 
 | Problem | Solution |
 |---------|----------|
-| `SQLSTATE[HY000]` or database connection errors | Ensure your `.env` database credentials are correct and the database exists. For SQLite, run `touch database/database.sqlite`. |
+| `SQLSTATE[HY000]` or database connection errors | Ensure your `.env` database credentials are correct. For SQLite, ensure `database/database.sqlite` exists. |
 | `Groq API key missing` | Set `GROQ_API_KEY` in `backend/.env`. Get a key from [console.groq.com](https://console.groq.com). |
 | `Class not found` after `git pull` | Run `composer install` and `php artisan optimize:clear`. |
 | `Permission denied` on `storage/` | Run `chmod -R 775 storage bootstrap/cache` inside the `backend/` directory. |
