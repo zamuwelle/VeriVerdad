@@ -39,7 +39,7 @@ export const Component = () => {
 		<>
 			<div className="min-h-screen flex flex-col lg:flex-row bg-[var(--color-bg)] text-[var(--color-text)]">
 				<Sidebar />
-				<main className="flex-1 md:px-64 pt-16">
+				<main className="flex-1 md:px-32 pt-16">
 					<h1 className="text-3xl font-bold text-[var(--color-text)] tracking-tight mb-8 text-center">History</h1>
 					<div className="flex flex-col gap-0.5 overflow-y-auto flex-1">
 					{ ! Array.isArray(chats) || chats.length === 0 ? <p className='text-center'>No recent conversation yet</p> :
@@ -47,7 +47,7 @@ export const Component = () => {
 						const isChatActive = location.pathname === `/veribot/${chat.id}`
 						const chatTitle = toTitleCase(chat.title || chat.first_message || 'Untitled Chat')
 						return (
-							<div key={chat.id} className={`group flex items-center justify-between rounded-full px-3.5 py-2 text-xs hover:opacity-80 ${isChatActive ? 'bg-[var(--color-bg)] text-[var(--color-text)] font-semibold' : 'text-[var(--color-text)] bg-transparent font-normal'}`}>
+							<div key={chat.id} className={`group flex items-center justify-between px-3.5 py-2 hover:opacity-80 text-2xl p-2 md:px-16 border border-[var(--color-border)] ${isChatActive ? 'bg-[var(--color-bg)] text-[var(--color-text)] font-semibold' : 'text-[var(--color-text)] bg-transparent font-normal'}`}>
 								{editingId === chat.id ? (
 									<input type="text" autoFocus value={editTitle} onChange={e => setEditTitle(e.target.value)} onBlur={() => saveRename(chat.id)} onKeyDown={e => e.key === 'Enter' && saveRename(chat.id)} className="bg-transparent border border-[var(--color-border)] rounded px-1.5 py-0.5 text-xs text-[var(--color-text)] outline-none flex-1 w-full" />
 								) : (
