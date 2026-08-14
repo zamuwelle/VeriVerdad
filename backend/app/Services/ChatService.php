@@ -191,7 +191,6 @@ PROMPT;
 			'user_id' => $userId,
 			'conversation_id' => $conversation->id,
 			'score' => (int) $m[1],
-			'submitted_at' => now()
 		]);
 
 		$this->sync->syncQuiz($quiz);
