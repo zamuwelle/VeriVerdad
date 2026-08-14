@@ -35,13 +35,28 @@ return [
 		'sqlite' => [
 			'driver' => 'sqlite',
 			'url' => env('DB_URL'),
-			'database' => env('DB_DATABASE', database_path('database.sqlite')),
+			'database' => env('DB_SQLITE_DATABASE', database_path('database.sqlite')),
 			'prefix' => '',
 			'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
 			'busy_timeout' => null,
 			'journal_mode' => null,
 			'synchronous' => null,
 			'transaction_mode' => 'DEFERRED',
+		],
+
+		'postgres_backup' => [
+			'driver' => 'pgsql',
+			'url' => env('DB_URL'),
+			'host' => env('DB_POSTGRES_HOST', '127.0.0.1'),
+			'port' => env('DB_POSTGRES_PORT', '5432'),
+			'database' => env('DB_POSTGRES_DATABASE', 'laravel'),
+			'username' => env('DB_POSTGRES_USERNAME', 'root'),
+			'password' => env('DB_POSTGRES_PASSWORD', ''),
+			'charset' => env('DB_POSTGRES_CHARSET', 'utf8'),
+			'prefix' => '',
+			'prefix_indexes' => true,
+			'search_path' => 'public',
+			'sslmode' => env('DB_POSTGRES_SSLMODE', 'prefer'),
 		],
 
 		'mysql' => [
