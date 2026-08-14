@@ -85,7 +85,8 @@ export const Component = () => {
 						thinkTime: `${diff} second${diff === 1 ? '' : 's'}`,
 						hasVerify: m.content?.includes('[VERIFY]'),
 						hasOfferQuiz: m.content?.includes('[OFFER_QUIZ]'),
-						content: m.content?.replace('[VERIFY]', '')?.replace('[OFFER_QUIZ]', '')?.replace(/\[CHOICES:[^\]]+\]/, '')?.trim() || ''
+						hasContinueQuiz: m.content?.includes('[CONTINUE_QUIZ]'),
+						content: m.content?.replace('[VERIFY]', '')?.replace('[OFFER_QUIZ]', '')?.replace('[CONTINUE_QUIZ]', '')?.replace(/\[CHOICES:[^\]]+\]/, '')?.trim() || ''
 					}
 				}))
 			})
@@ -109,8 +110,9 @@ export const Component = () => {
 			const raw = res.data.reply || ''
 			const hasVerify = raw.includes('[VERIFY]')
 			const hasOfferQuiz = raw.includes('[OFFER_QUIZ]')
+			const hasContinueQuiz = raw.includes('[CONTINUE_QUIZ]')
 			const choicesMatch = raw.match(/\[CHOICES:\s*([\s\S]+?)\]/)
-			const reply = raw.replace('[VERIFY]', '').replace('[OFFER_QUIZ]', '').replace(/\[CHOICES:\s*[\s\S]+?\]/, '').trim()
+			const reply = raw.replace('[VERIFY]', '').replace('[OFFER_QUIZ]', '').replace('[CONTINUE_QUIZ]', '').replace(/\[CHOICES:\s*[\s\S]+?\]/, '').trim()
 			const totalTime = res.data.usage?.total_time
 			const elapsed = totalTime ? Math.max(1, Math.round(totalTime)) : Math.max(1, Math.round((Date.now() - (requestStartTimeRef.current || Date.now())) / 1000))
 			setMessages(prev => [...prev, {
