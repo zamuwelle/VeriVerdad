@@ -2,25 +2,21 @@
 
 namespace App\Providers;
 
+use App\Services\SyncService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-	/**
-	 * Register any application services.
-	 */
-	public function register(): void
+	public function register()
 	{
-		//
 	}
 
-	/**
-	 * Bootstrap any application services.
-	 */
 	public function boot()
 	{
 		if (env('APP_ENV') == 'production') {
 			$this->app['request']->server->set('HTTPS', true);
 		}
+
+		app(SyncService::class)->bootstrapFromPostgres();
 	}
 }
