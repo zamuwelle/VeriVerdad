@@ -2,15 +2,16 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\LeaderboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('secret.token')->group(function () {
 	Route::post('register', [AuthController::class, 'register']);
-	Route::post('login', [AuthController::class, 'login'])->name('login');
+	Route::post('login', [AuthController::class, 'login']);
 
 	Route::middleware('auth:sanctum')->group(function () {
 		Route::post('logout', [AuthController::class, 'logout']);
-		Route::get('users', [AuthController::class, 'users']);
+		Route::get('leaderboard', [LeaderboardController::class, 'index']);
 		Route::post('chat', [ChatController::class, 'chat']);
 		Route::get('chats', [ChatController::class, 'index']);
 		Route::get('chats/{id}', [ChatController::class, 'show']);
