@@ -26,12 +26,10 @@ export const Component = () => {
 				<main className="flex-1 md:px-32 pt-16">
 					<h1 className="text-4xl font-bold text-[var(--color-text)] mb-8 text-center">Leaderboards</h1>
 					<div className="flex flex-col gap-0.5 overflow-y-auto flex-1">
-						{loading && <p className="text-center">Loading...</p>}
 
-						{!loading && (!users ? [] : users).length === 0 ?
-							<p className="text-center">No other users yet.</p>
-						: (
-							<>
+						{loading ? <p className="text-center">Loading...</p> :
+						(!users ? [] : users).length === 0 ? <p className="text-center">No other users yet.</p> :
+						(<>
 							<h2 className='text-3xl font-bold text-[var(--color-text-muted)] mb-8 text-center'>
 								Most Veribot History
 							</h2>
@@ -46,8 +44,7 @@ export const Component = () => {
 									</div>
 								);
 							})}
-							</>
-						)}
+						</>)}
 
 					</div>
 				</main>
