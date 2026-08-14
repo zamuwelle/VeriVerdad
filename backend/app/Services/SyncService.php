@@ -37,11 +37,15 @@ class SyncService
 
 	public function bootstrapFromPostgres()
 	{
-		if (DB::connection('sqlite')->table('users')->count() > 0) {
-			return;
-		}
+		try {
+			if (DB::connection('sqlite')->table('users')->count() > 0) {
+				return;
+			}
 
-		$this->syncFromPostgres();
+			$this->syncFromPostgres();
+		} catch (\Throwable $e) {
+			file_put_contents(storage_path('logs/sync_errors.log'), date('c') . ' ' . $e->getMessage() . PHP_EOL, FILE_APPEND);
+		}
 	}
 
 	public function syncFromPostgres()
