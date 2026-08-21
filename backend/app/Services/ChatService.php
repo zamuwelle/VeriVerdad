@@ -31,7 +31,7 @@ class ChatService
 			$titleResult = app(GroqService::class)->chat([
 				['role' => 'system', 'content' => 'Summarize the user message into a short 3 to 5 word title. Reply with only the title, no punctuation.'],
 				['role' => 'user', 'content' => $content]
-			], null, 'llama-3.1-8b-instant');
+			], null, 'openai/gpt-oss-20b');
 			$conversation->update(['title' => $titleResult['reply']]);
 		}
 
@@ -160,13 +160,13 @@ PROMPT;
 
 		$groq = app(GroqService::class);
 		$result = $verify
-			? $groq->chat($groqMessages, [['type' => 'browser_search']], 'openai/gpt-oss-20b')
+			? $groq->chat($groqMessages, [['type' => 'browser_search']], 'openai/gpt-oss-120b')
 			: $groq->chat($groqMessages);
 
 		$thoughtResult = $groq->chat([
 			['role' => 'system', 'content' => 'You are Veribot\'s detective inner voice. Write a natural 1-sentence inner thought as a curious digital investigator. Write naturally in first person (e.g. "A quick greeting — ready to help them check any claims.", "Looking into this viral health claim to see what major medical authorities say.", "Searching verified fact-checkers and primary research."). Never use robotic phrases like "User initiated", "User says", "protocol", "proceeding with", or system jargon. Output only the natural thought.'],
 			['role' => 'user', 'content' => $content]
-		], null, 'llama-3.1-8b-instant');
+		], null, 'openai/gpt-oss-20b');
 
 		$reply = $result['reply'];
 		$reasoning = $thoughtResult['reply'];

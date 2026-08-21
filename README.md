@@ -41,7 +41,7 @@ VeriVerdad is a full-stack web application that promotes **Media and Information
 - **Veribot Chat** — A conversational AI assistant that evaluates claims, provides sourced verification, and runs interactive CRAAP-based quiz challenges to help users build critical thinking skills.
 - **History & Leaderboards** — Users can review past conversations and track their verification progress.
 
-The backend is built with **Laravel 13** (powered by **FrankenPHP** for high-performance serving), and the frontend is a **React 19** single-page application bundled with **Vite** and styled with **Tailwind CSS 4**. AI responses are generated via the **Groq API** using the `openai/gpt-oss-20b` model.
+The backend is built with **Laravel 13** (powered by **FrankenPHP** for high-performance serving), and the frontend is a **React 19** single-page application bundled with **Vite** and styled with **Tailwind CSS 4**. AI responses are generated via the **Groq API** using the `openai/gpt-oss-120b` model.
 
 ---
 

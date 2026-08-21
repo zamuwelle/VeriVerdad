@@ -14,7 +14,7 @@ class GroqService
 		$keys = array_values(array_filter(Config::get('groq.keys', [])));
 		if (empty($keys)) throw new \RuntimeException('No Groq API keys configured.');
 
-		$model = $model ?? Config::get('groq.model', 'openai/gpt-oss-20b');
+		$model = $model ?? Config::get('groq.model', 'openai/gpt-oss-120b');
 		$count = count($keys);
 		$startIndex = Cache::increment('groq_key_offset') % $count;
 
@@ -22,7 +22,7 @@ class GroqService
 			$index = ($startIndex + $i) % $count;
 			$key = $keys[$index];
 
-			if (Cache::has("groq_cd_$index")) continue;
+			if (Cache::has("groq_cd_{$index}_{$model}")) continue;
 
 			try {
 				$payload = [
@@ -63,12 +63,12 @@ class GroqService
 
 				if ($response->status() === 429) {
 					$retryAfter = (int) ($response->header('Retry-After') ?? 60);
-					Cache::put("groq_cd_$index", true, now()->addSeconds(max(5, $retryAfter)));
+					Cache::put("groq_cd_{$index}_{$model}", true, now()->addSeconds(max(5, $retryAfter)));
 					continue;
 				}
 
 				if ($response->status() === 401) {
-					Cache::put("groq_cd_$index", true, now()->addYear());
+					Cache::put("groq_cd_{$index}_{$model}", true, now()->addYear());
 					continue;
 				}
 			} catch (ConnectionException $e) {
